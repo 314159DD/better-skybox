@@ -13,7 +13,22 @@ public class SkyAreasTest
 		a.sky = "day";
 		a.skyNight = "night";
 		assertEquals("day", a.skyFor(SkyClock.Phase.DAY));
+		assertEquals("day", a.skyFor(SkyClock.Phase.DAWN));
 		assertEquals("day", a.skyFor(SkyClock.Phase.DUSK));
+		assertEquals("night", a.skyFor(SkyClock.Phase.NIGHT));
+	}
+
+	@Test
+	public void everyPhaseCanBringItsOwnSky()
+	{
+		SkyAreas.Area a = new SkyAreas.Area();
+		a.sky = "day";
+		a.skyDawn = "dawn";
+		a.skyDusk = "dusk";
+		a.skyNight = "night";
+		assertEquals("day", a.skyFor(SkyClock.Phase.DAY));
+		assertEquals("dawn", a.skyFor(SkyClock.Phase.DAWN));
+		assertEquals("dusk", a.skyFor(SkyClock.Phase.DUSK));
 		assertEquals("night", a.skyFor(SkyClock.Phase.NIGHT));
 	}
 

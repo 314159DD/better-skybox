@@ -38,7 +38,7 @@ matching section below it.
 | Sky by time | on | cubemap: dawn/day/dusk/night follow the Time of day; areas may bring their own night or dusk sky |
 | Dawn / Dusk / Night cubemap | DAWN / SUNSET / NIGHT | cubemap: phase defaults for areas without their own |
 | Custom cubemap folder | | folder under `~/.runelite/gpu-skybox/<name>/`: six `px nx py ny pz nz .png`, or one `skybox.png` 4x2 atlas (px nz nx pz / py ny) |
-| Time of day (Sky section) | DAY | procedural: DAY, SUNRISE, DAWN, SUNSET, DUSK, NIGHT, BLOOD_MOON, CLOCK (local time), CYCLE (full day in `Cycle length` minutes), CUSTOM (sliders) |
+| Time of day (Sky section) | DAY | both sky types: DAY, SUNRISE, DAWN, SUNSET, DUSK, NIGHT, BLOOD_MOON, CLOCK (local time), CYCLE (full day in `Cycle length` minutes), CUSTOM (sliders) |
 | Sun altitude / azimuth | 30 / 235 | procedural, Time of day = CUSTOM |
 | Moon, Stars | on | procedural |
 | Real star map | on | procedural: NASA Deep Star Map (Gaia DR2) turning with the time of day, instead of generated stars |
@@ -60,7 +60,7 @@ matching section below it.
 | Rotation / Drift speed | 0 / 0 | cubemap: static offset in degrees, drift in degrees per minute |
 | Sky by area | on | pick sky and fog colour from the map area; 162 areas (117 HD tables plus our own continent boxes), 75 with their own sky |
 | Time fade | 4 | seconds for time-of-day and config changes |
-| Area fade | 8 | cubemap: tiles walked past a border until the new sky is fully in; walking back reverses |
+| Area fade | 8 | cubemap: tiles walked past a border until the new sky is fully in; walking back swaps the skies and carries the blend over. Teleports and time-of-day changes use Time fade instead |
 
 Terrain fog itself is "Fog depth" in the Fog and blending section; 0 turns it off.
 Draw distance, AA and the rest are the same as the stock GPU plugin but live in their own config group

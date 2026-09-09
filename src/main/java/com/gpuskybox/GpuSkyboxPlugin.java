@@ -38,6 +38,7 @@ import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import javax.inject.Inject;
@@ -109,6 +110,8 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 	private static final int UNIFORM_BUFFER_SIZE = 5 * Float.BYTES;
 	private static final int NUM_ZONES = Constants.EXTENDED_SCENE_SIZE >> 3;
 	private static final int MAX_WORLDVIEWS = 4096;
+	/** A larger step between two frames than any walk or run is a teleport. */
+	private static final int TELEPORT_TILES = 8;
 
 	@Inject
 	private Client client;
@@ -144,11 +147,12 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 	private ProceduralSkyRenderer proceduralSky;
 	private final SkyAreas skyAreas = new SkyAreas();
 	private final SkyClock skyClock = new SkyClock();
-	private final Lightning lightning = new Lightning(new java.util.Random());
+	private final Lightning lightning = new Lightning(new Random());
 	private float flash;
 	private SkyAreas.Area currentArea;
 	private SkyAreas.Area previousArea;
 	private WorldPoint lastWorld;
+	private SkyClock.Phase lastPhase;
 	private final BorderBlend borderBlend = new BorderBlend();
 
 	@Inject
@@ -1097,14 +1101,18 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		SkyAreas.Area area = world == null ? null : skyAreas.find(world);
 		if (area != currentArea)
 		{
-			if (area == previousArea && borderBlend.active())
+			boolean jumped = lastWorld == null || world == null
+				|| lastWorld.getPlane() != world.getPlane()
+				|| lastWorld.distanceTo2D(world) > TELEPORT_TILES;
+			if (jumped)
 			{
-				if (world != null)
-				{
-					borderBlend.bounce(world.getX(), world.getY());
-				}
+				borderBlend.release();
 			}
-			else if (world != null)
+			else if (area == previousArea && borderBlend.active())
+			{
+				borderBlend.bounce(world.getX(), world.getY());
+			}
+			else
 			{
 				borderBlend.cross(world.getX(), world.getY());
 			}
@@ -1119,10 +1127,9 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 	 * Cubemap for this frame: the area's sky for the current phase, else the global phase default, else the
 	 * manual Cubemap. A failed load falls through to the next candidate.
 	 */
-	private void selectCubemap()
+	private void selectCubemap(SkyClock.Phase phase)
 	{
 		float fade = config.skyboxFadeSeconds();
-		SkyClock.Phase phase = config.skyboxByTime() ? SkyClock.phase(skyClock.hour(config)) : SkyClock.Phase.DAY;
 		if (currentArea != null)
 		{
 			String areaSky = currentArea.skyFor(phase);
@@ -1146,25 +1153,39 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			default:
 				texture = config.skyboxTexture();
 		}
-		String name = texture == GpuSkyboxConfig.SkyboxTexture.CUSTOM
-			? config.skyboxCustomName().trim()
-			: texture.dir;
-		skyboxRenderer.select(name, fade);
+		if (!skyboxRenderer.select(textureName(texture), fade) && texture != config.skyboxTexture())
+		{
+			skyboxRenderer.select(textureName(config.skyboxTexture()), fade);
+		}
+	}
+
+	private String textureName(GpuSkyboxConfig.SkyboxTexture texture)
+	{
+		return texture == GpuSkyboxConfig.SkyboxTexture.CUSTOM ? config.skyboxCustomName().trim() : texture.dir;
 	}
 
 	private boolean shouldDrawCubemap(Scene scene)
 	{
-		boolean stormy = config.skyboxEnabled() && config.lightningEnabled() && currentArea != null && currentArea.lightning;
-		flash = lightning.intensity(skyClock.elapsedSeconds(), stormy);
 		if (config.skyboxEnabled())
 		{
 			updateArea();
-			if (!procedural())
+			if (procedural())
 			{
-				selectCubemap();
+				borderBlend.release();
+			}
+			else
+			{
+				SkyClock.Phase phase = config.skyboxByTime() ? SkyClock.phase(skyClock.hour(config)) : SkyClock.Phase.DAY;
+				if (phase != lastPhase)
+				{
+					// the seconds fade owns time-of-day switches, even mid-way through a border blend
+					borderBlend.release();
+					lastPhase = phase;
+				}
+				selectCubemap(phase);
 				if (borderBlend.active() && lastWorld != null)
 				{
-					skyboxRenderer.overrideBlend(borderBlend.progress(lastWorld.getX(), lastWorld.getY(), config.skyboxFadeTiles()));
+					skyboxRenderer.overrideBlend(borderBlend.advance(lastWorld.getX(), lastWorld.getY(), config.skyboxFadeTiles()));
 				}
 			}
 		}
@@ -1173,6 +1194,8 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			&& ready
 			&& (scene.getSkybox() == null || !config.preferGameSkybox())
 			&& (!config.skyboxOverworldOnly() || isOverworld());
+		boolean stormy = draw && config.lightningEnabled() && currentArea != null && currentArea.lightning;
+		flash = lightning.intensity(skyClock.elapsedSeconds(), stormy);
 		if (draw && procedural())
 		{
 			GpuSkyboxConfig.SkyPreset mood = config.areaMoods() && currentArea != null ? currentArea.presetValue : null;
@@ -1212,15 +1235,7 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 
 	private int fogColor(boolean cubemap)
 	{
-		int base = baseFogColor(cubemap);
-		if (flash <= 0f)
-		{
-			return base;
-		}
-		int r = (base >> 16 & 0xFF) + Math.round((255 - (base >> 16 & 0xFF)) * flash * 0.6f);
-		int g = (base >> 8 & 0xFF) + Math.round((255 - (base >> 8 & 0xFF)) * flash * 0.6f);
-		int b = (base & 0xFF) + Math.round((255 - (base & 0xFF)) * flash * 0.6f);
-		return r << 16 | g << 8 | b;
+		return SkyboxRenderer.mixColor(baseFogColor(cubemap), 0xFFFFFF, flash * 0.6f);
 	}
 
 	private void drawSkybox(Scene scene, int sky, boolean cubemap, float cameraX, float cameraY, float cameraZ,

@@ -167,7 +167,8 @@ class SkyboxRenderer
 		return mixColor(previous.horizonColor, current.horizonColor, t);
 	}
 
-	private static int mixColor(int a, int b, float t)
+	/** Per-channel lerp of two 0xRRGGBB colours: t = 0 gives a, t = 1 gives b. */
+	static int mixColor(int a, int b, float t)
 	{
 		int r = Math.round((a >> 16 & 0xFF) + ((b >> 16 & 0xFF) - (a >> 16 & 0xFF)) * t);
 		int g = Math.round((a >> 8 & 0xFF) + ((b >> 8 & 0xFF) - (a >> 8 & 0xFF)) * t);

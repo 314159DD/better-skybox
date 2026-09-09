@@ -20,6 +20,8 @@ class SkyClock
 		DUSK
 	}
 
+	private static final double SYNODIC_MONTH_DAYS = 29.530588;
+	private static final LocalDateTime REFERENCE_NEW_MOON = LocalDateTime.of(2000, 1, 6, 18, 14);
 	private final long startNanos = System.nanoTime();
 
 	float elapsedSeconds()
@@ -83,9 +85,6 @@ class SkyClock
 	{
 		return ((azimuth - 90) / 15 + 6 + 24) % 24;
 	}
-
-	private static final double SYNODIC_MONTH_DAYS = 29.530588;
-	private static final LocalDateTime REFERENCE_NEW_MOON = LocalDateTime.of(2000, 1, 6, 18, 14);
 
 	/** Moon disk illumination fraction from days since new moon. */
 	private static float illumination(double daysSinceNewMoon)

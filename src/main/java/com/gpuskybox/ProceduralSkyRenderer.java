@@ -127,8 +127,17 @@ class ProceduralSkyRenderer
 	 */
 	void update(GpuSkyboxConfig config, SkyClock clock, SkyPreset override)
 	{
-		SkyPreset preset = override != null ? override : config.skyPreset();
-		hour = override != null ? SkyClock.hourForAzimuth(override.azimuth) : clock.hour(config);
+		SkyPreset preset;
+		if (override != null)
+		{
+			preset = override;
+			hour = SkyClock.hourForAzimuth(override.azimuth);
+		}
+		else
+		{
+			preset = config.skyPreset();
+			hour = clock.hour(config);
+		}
 		float altitude, azimuth;
 		switch (preset)
 		{

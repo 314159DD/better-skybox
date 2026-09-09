@@ -848,7 +848,7 @@ public interface GpuSkyboxConfig extends Config
 	@ConfigItem(
 		keyName = "skyboxFadeTiles",
 		name = "Area fade",
-		description = "Tiles to walk past an area border before the new sky is fully in. Walking back reverses it. 0 = instant.",
+		description = "Tiles to walk past an area border before the new sky is fully in. Walking back swaps the skies and carries the blend over. 0 = instant.",
 		position = 9,
 		section = cubemapSection
 	)
