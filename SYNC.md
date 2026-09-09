@@ -114,6 +114,6 @@ the collapsible Renderer group.
 ## Not covered by the check
 
 Files this plugin owns outright. They have no upstream counterpart and `--apply` never touches them:
-`SkyPass`, `SkyboxRenderer`, `ProceduralSkyRenderer`, `StarMap`, `CubemapLoader`, `CubemapLoads`, `SkyAreas`,
-`SkyClock`, `Lightning`, `BorderBlend`, `GpuSettingsImport`, the `sky_*.glsl` shaders, `sky_areas.json`,
-`sky_gradient.json` and the bundled cubemaps under `skybox/`.
+`SkyPass`, `SkyboxRenderer`, `ProceduralSkyRenderer`, `StarMap`, `CubemapLoader`, `CubemapLoads`, `SkyPack`,
+`SkyAreas`, `SkyClock`, `Lightning`, `BorderBlend`, `GpuSettingsImport`, the `sky_*.glsl` shaders,
+`sky_areas.json`, `sky_gradient.json`, `sky_pack_manifest.json` and the debug cubemap under `skybox/`.

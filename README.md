@@ -19,11 +19,17 @@ and stars that follow the time of day. It is not 117 HD; the game looks exactly 
 plugin, and only the sky is different. Turn it on and the GPU plugin turns itself off, and your GPU settings are
 carried over, so nothing else about your client changes.
 
-## Why the download is about 36 MB
+## The sky pack
 
-The jar bundles 21 CC0 skies in full quality (13 from Poly Haven, 5 from ambientCG, 3 stylised ones from
-OpenGameArt) plus NASA's Deep Star Map for the procedural night sky. That is where the size goes. RuneLite
-downloads a plugin once and keeps it, so you pay the download once, not on every start.
+The plugin is about 250 KB and the procedural sky needs nothing else: a gradient sky with a sun, a moon,
+stars, clouds and the day/night cycle, drawn from the jar.
+
+The photographed skies are a 35 MB pack of their own: 21 CC0 cubemaps in full quality (13 from Poly Haven,
+5 from ambientCG, 3 stylised ones from OpenGameArt) and NASA's Deep Star Map, all lossless PNG. Turn on
+**Download sky pack** in the Cubemap sky section and it is fetched once into
+`~/.runelite/better-skybox/pack/`. Until it is there, Sky type = CUBEMAP draws the procedural sky instead
+and the procedural sky uses its own generated stars; the plugin says so once in the chat box. To remove the
+pack, delete that folder. Turning the setting off leaves the files alone.
 
 ## Settings
 
@@ -33,25 +39,26 @@ in the Sky section and open the matching section below it.
 - **Renderer** (closed by default): the stock GPU plugin's settings, draw distance to render threads. Filled from
   your GPU plugin settings the first time Better Skybox starts.
 - **Sky**: the switch, the sky type (cubemap or procedural), the time of day, overworld only, lightning.
-- **Cubemap sky**: which bundled sky to show, the dawn/dusk/night companions, the star map over night skies,
-  sky by area, the fades.
+- **Cubemap sky**: the sky pack download, which sky to show, the dawn/dusk/night companions, the star map over
+  night skies, sky by area, the fades.
 - **Procedural sky** (closed by default): sun, moon, stars, clouds, night-sky extras, area moods.
 - **Fog and blending**: how the sky meets the terrain, for both sky types. Fog depth lives here too.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
 | Enable sky | on | draw a sky instead of the flat fog colour |
-| Sky type | CUBEMAP | CUBEMAP is a texture, PROCEDURAL is a gradient sky with sun, moon and stars |
+| Sky type | PROCEDURAL | PROCEDURAL is a gradient sky with sun, moon and stars, out of the jar; CUBEMAP is a photograph from the sky pack |
 | Time of day | DAY | for both sky types: DAY, SUNRISE, DAWN, SUNSET, DUSK, NIGHT, BLOOD_MOON, CLOCK (your local time), CYCLE (a full day in Cycle length minutes), CUSTOM (the sun sliders) |
 | Cycle length | 24 | Time of day = CYCLE: real minutes for one full day |
 | Overworld only | on | underground and in dungeons the flat colour stays |
 | Prefer game skybox | off | where the game ships its own skybox model, draw that instead |
 | Lightning | on | random flashes where 117 HD marks storms: high Wilderness, Barrows, Draynor Manor and its forest, the Misthalin Mystery Manor, Tempoross Cove |
-| Cubemap | PARTLY_CLOUDY | one of the 21 bundled skies, DEBUG, or CUSTOM for your own folder. With Sky by area on, this is the sky for unmapped areas |
+| Download sky pack | off | fetch the 35 MB pack once: the 21 cubemap skies and the NASA star map, into `~/.runelite/better-skybox/pack` |
+| Cubemap | PARTLY_CLOUDY | one of the 21 skies in the pack, DEBUG, or CUSTOM for your own folder. With Sky by area on, this is the sky for unmapped areas |
 | Custom cubemap folder | | folder name under `~/.runelite/better-skybox/` used when Cubemap = CUSTOM |
 | Sky by time | on | dawn, day, dusk and night cubemaps follow the Time of day; day is the Cubemap above or the area's own sky |
 | Dawn / Dusk / Night cubemap | DAWN / SUNSET / NIGHT | the other three phases, unless an area brings its own |
-| Star map on night skies | on | draw the NASA star map over the bundled night cubemaps and over any sky you picked as a night one, so the photo's blurry star blobs give way to real ones |
+| Star map on night skies | on | draw the NASA star map over the pack's night cubemaps and over any sky you picked as a night one, so the photo's blurry star blobs give way to real ones |
 | Night sky dimming | 50 | how far the photo sky is darkened where the star map is drawn, in percent |
 | Sky by area | on | sky and fog colour follow the map area you are in; unmapped areas use the Cubemap above |
 | Time fade | 4 | seconds to crossfade on a time-of-day or settings change |
@@ -61,7 +68,7 @@ in the Sky section and open the matching section below it.
 | Sun disk | on | procedural: draw the sun itself, not only its glow |
 | Moon, Stars | on | procedural |
 | Moon size / Moon phase | 100 / 100 | procedural, percent; phase 0 is a new moon. Under CLOCK and CYCLE the moon follows the calendar instead |
-| Real star map | on | procedural: NASA's Deep Star Map (Gaia DR2) turning with the time of day, instead of generated stars |
+| Real star map | on | procedural: NASA's Deep Star Map (Gaia DR2) turning with the time of day, instead of generated stars. Needs the sky pack; without it the generated stars are drawn |
 | Star brightness | 100 | procedural, percent |
 | Shooting stars, Nebula, Aurora | on / on / off | procedural night-sky extras |
 | Cloud cover / Cloud speed | 30 / 100 | procedural, percent; 0 cover is a clear sky, 0 speed is still air |
@@ -88,7 +95,8 @@ and the kingdoms of Misthalin, Asgarnia and Kandarin each get a day sky of their
 
 Areas can carry their own time-of-day set (a night or dusk sky that fits the place), a mood for the procedural
 sky (Morytania stays at dusk, Darkmeyer sits under a blood moon, the desert is always high noon) and lightning
-where 117 HD marks storms.
+where 117 HD marks storms. The area skies are cubemaps and come with the sky pack; the moods and the
+lightning are the procedural sky's and need nothing.
 
 Crossing a border eases the sky over the next Area fade tiles; walking back reverses the blend rather than
 restarting it. A sky you have not seen yet in this session is decoded in the background while the current one
@@ -106,12 +114,13 @@ Put your own sky in a folder under `~/.runelite/better-skybox/` (on Windows that
 
 Six square faces of the same size, or a single `skybox.png` atlas of 4x2 faces laid out as `px nz nx pz` on the
 top row and `py ny` on the bottom row. Then set Cubemap = CUSTOM and type the folder name into Custom cubemap
-folder. If the folder cannot be read the plugin falls back to the bundled sky and says so once in the chat box:
+folder. If the folder cannot be read the plugin falls back to a pack sky and says so once in the chat box:
 `Better Skybox: custom sky folder <name> not found, using PARTLY_CLOUDY` (or `no custom sky folder set` while the
 name is empty).
 
-A folder named like a bundled sky (for example `qwantani_night_puresky`) replaces that sky wherever it is used,
-including in the area table.
+Faces are looked for in `pack/<name>/` first and in `<name>/` after it, so a folder of your own named like a
+pack sky is used only while the pack is not installed. Give yours a name of its own and pick it with Cubemap =
+CUSTOM.
 
 To change which sky an area gets, drop your own `sky_areas.json` into `~/.runelite/better-skybox/`; it replaces
 the bundled table without a rebuild. The bundled file, and the script that generates it, are described in
@@ -126,11 +135,15 @@ the two cannot be on at the same time. Better Skybox is for players who want the
 sky pass only touches the pixels behind the scene. Fog colour and fog depth are yours to set, as they are in the
 GPU plugin.
 
-**What does it cost in performance?** One extra full-screen pass per frame for the sky. It is not noticeable
-next to the scene itself. Cubemaps are decoded on a background thread, and the 10 MB star map is only loaded
-while a sky that draws it is on screen.
+**Do I have to download the sky pack?** No. The procedural sky is the default and draws without it. The pack
+buys you the 21 photographed cubemap skies, the per-area skies that name them, and the real star map behind
+the procedural night sky. It is one toggle, one download, and it stays on disk.
 
-**Why do the night cubemaps have crisp stars now?** The bundled night skies are 512 px photo HDRIs, so their
+**What does it cost in performance?** One extra full-screen pass per frame for the sky. It is not noticeable
+next to the scene itself. Cubemaps are decoded on a background thread, and the star map is only loaded while
+a sky that draws it is on screen.
+
+**Why do the night cubemaps have crisp stars now?** The pack's night skies are 512 px photo HDRIs, so their
 stars come out as soft blobs. With Star map on night skies the plugin dims that sky a little above the horizon
 and draws the same NASA Deep Star Map the procedural sky uses over it, turning with the time of day. It applies
 to NIGHT, MOONRISE and AURORA_NIGHT, to any area's own night sky, and to whatever you set as the Night cubemap,
@@ -142,7 +155,7 @@ Better Skybox contains the stock renderer, so nothing is lost; turn it off and t
 **Where are my GPU settings?** In the Renderer section, closed by default. They were copied from the GPU plugin
 the first time Better Skybox started.
 
-**Can I use RuneScape 3's skies?** They are not bundled (Jagex assets). If you own the game files and have
+**Can I use RuneScape 3's skies?** They are not in the pack (Jagex assets). If you own the game files and have
 ripped a set, drop it into a custom folder and pick CUSTOM.
 
 ## Credits

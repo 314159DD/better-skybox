@@ -1,7 +1,7 @@
 # Contributing to Better Skybox
 
 Everything a player needs is in [README.md](README.md). This file is for building the plugin, running it against
-a client, keeping the copied renderer in sync with RuneLite, and adding skies.
+a client, keeping the copied renderer in sync with RuneLite, and adding skies to the sky pack.
 
 ## Dev setup
 
@@ -56,12 +56,16 @@ reflection in `premain`, which is what the Gradle test runner does too, minus th
   (the loader thread), `SkyAreas` (the area table), `SkyClock` (time of day and moon), `Lightning`,
   `BorderBlend`, `GpuSettingsImport`.
 - `src/main/resources/com/betterskybox/`: the GPU shaders, `sky_vert.glsl`, `sky_frag.glsl`,
-  `proc_sky_frag.glsl`, `sky_gradient.json`, `sky_areas.json`, and the bundled cubemaps under `skybox/<name>/`.
+  `proc_sky_frag.glsl`, `sky_gradient.json`, `sky_areas.json`, `sky_pack_manifest.json`, and one cubemap,
+  `skybox/debug/`. The 21 skies and the star map are 35 MB of PNG and ship in the sky pack instead, so the jar
+  stays under the hub's limit.
 - `src/agent/java/`: the launcher agent, excluded from the hub jar.
 - `src/test/java/`: JUnit 4 tests.
 - `tools/`: the Python scripts below. `patches/`: the two hook patches for the sync script.
 - `ref/` (gitignored): the RuneLite checkout the sync script reads, 117 HD PR 558 and 655 files, downloaded
   panoramas.
+- `sky-pack/` (gitignored): the pack's PNG faces as the converters write them, and what `build_sky_pack.py`
+  zips.
 
 ## Keeping the renderer in sync with RuneLite
 
@@ -100,24 +104,39 @@ islands come from) and rerun the script. `SkyAreasTest` pins the lookup at 19 wo
 order of a few nested areas, so a regenerated table that reorders them fails the build. The client log prints
 `Sky area: <name> sky=<sky> fog=<fog>` at debug level on every change.
 
-## Adding a bundled sky
+## Adding a sky to the pack
 
 `tools/polyhaven_to_cubemap.py` (needs `numpy` and `pillow`) turns a 2:1 equirectangular panorama into six
 faces:
 
 ```
-python tools/polyhaven_to_cubemap.py kloppenheim_06_puresky               # CC0 sky from Poly Haven, into the resources
+python tools/polyhaven_to_cubemap.py kloppenheim_06_puresky               # CC0 sky from Poly Haven, into sky-pack/
 python tools/polyhaven_to_cubemap.py --file pano.png --name swamp --custom  # local image, to ~/.runelite/better-skybox/swamp/
 ```
 
-A bundled sky also needs a constant in `BetterSkyboxConfig.SkyboxTexture` (the enum's `dir` is the folder name),
-a line in `NOTICE`, and `ResourceIntegrityTest` will then assert that its six faces exist. Poly Haven's
-`*_puresky` assets are sky-only panoramas and convert cleanly; anything with ground in it shows that ground below
-the horizon. Poly Haven and ambientCG both require a `User-Agent` header (the script sets one).
+A pack sky also needs a constant in `BetterSkyboxConfig.SkyboxTexture` (the enum's `dir` is the folder name) and
+a line in `NOTICE`. Poly Haven's `*_puresky` assets are sky-only panoramas and convert cleanly; anything with
+ground in it shows that ground below the horizon. Poly Haven and ambientCG both require a `User-Agent` header
+(the script sets one).
 
 `tools/starmap_to_cubemap.py` builds the `stars` cubemap (1024 px faces) from NASA's `starmap_2020_8k.exr` in
 `ref/nasa/`; it reads the EXR through OpenCV with `OPENCV_IO_ENABLE_OPENEXR=1`.
 `docs/research-sky-sources-2026-09-09.md` lists more sources with their licences.
+
+## Building and publishing the sky pack
+
+```
+python tools/build_sky_pack.py
+```
+
+Zips every folder in `sky-pack/` into `build/better-skybox-sky-pack.zip` (about 35 MB, stored not deflated:
+PNG is already compressed) and rewrites `src/main/resources/com/betterskybox/sky_pack_manifest.json` with the
+folder names it packed. Commit the manifest: no cubemap ships in the jar any more, so it is the only thing
+`ResourceIntegrityTest` and `SkyAreasIntegrityTest` can check the config enum and the area table against.
+
+The zip goes up as the release asset `better-skybox-sky-pack.zip` on tag `sky-pack-v1`, which is what
+`SkyPack.PACK_URL` fetches. Changing the pack's contents means a new tag and a new `PACK_URL`: a client that
+already has `~/.runelite/better-skybox/pack/.complete` never downloads again.
 
 ## Code style
 
@@ -133,7 +152,7 @@ the horizon. Poly Haven and ambientCG both require a `User-Agent` header (the sc
 
 ## Tests
 
-`gradlew test` runs the JUnit 4 suite (85 tests at the time of writing). They are all pure Java: no GL context,
+`gradlew test` runs the JUnit 4 suite (92 tests at the time of writing). They are all pure Java: no GL context,
 no client, so they run on CI. The seams that make that possible are worth knowing before you add to them:
 
 - `CubemapLoads.start(ExecutorService, Consumer<Runnable>)` takes a test executor (`QueuedExecutor`) and a
@@ -149,7 +168,10 @@ no client, so they run on CI. The seams that make that possible are worth knowin
 - `ProceduralSkyRenderer.loadGradient(gson)` and `evaluate` are reachable without a GL program.
 - `ConfigContractTest` reflects over `BetterSkyboxConfig`: unique keys, every item in a section, every
   `getKey().equals("...")` literal in the plugin and `SkyPass` a declared key.
-- `ResourceIntegrityTest` and `SkyAreasIntegrityTest` prove every bundled folder and every area entry resolves.
+- `SkyPack.packEntry(String)` is the zip rule on its own, so what a downloaded pack may write is tested without
+  a download.
+- `ResourceIntegrityTest` and `SkyAreasIntegrityTest` prove every shader resolves in the jar and every sky the
+  config enum or the area table names is in `sky_pack_manifest.json`.
 
 What cannot be unit tested and needs a run in game: the shaders, the GL upload, the star map on screen, the
 feel of a border crossing and the settings import against a real profile. The in-game checklist for a release
