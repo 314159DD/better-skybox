@@ -1097,8 +1097,6 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			currentArea = area;
 			log.info("Sky area: {}", area == null ? "unmapped" : area.name + " sky=" + area.sky + " fog=" + area.fog);
 		}
-		boolean stormy = config.lightningEnabled() && currentArea != null && currentArea.lightning;
-		flash = lightning.intensity(skyClock.elapsedSeconds(), stormy);
 	}
 
 	/**
@@ -1140,6 +1138,8 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 
 	private boolean shouldDrawCubemap(Scene scene)
 	{
+		boolean stormy = config.skyboxEnabled() && config.lightningEnabled() && currentArea != null && currentArea.lightning;
+		flash = lightning.intensity(skyClock.elapsedSeconds(), stormy);
 		if (config.skyboxEnabled())
 		{
 			updateArea();

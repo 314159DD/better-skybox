@@ -559,7 +559,7 @@ public interface GpuSkyboxConfig extends Config
 	@ConfigItem(
 		keyName = "lightningEnabled",
 		name = "Lightning",
-		description = "Random lightning flashes where 117 HD marks storms: Wilderness (high), Barrows, Darkmeyer, Draynor Manor, Tempoross.",
+		description = "Random lightning flashes where 117 HD marks storms: Wilderness (high), Barrows, Draynor Manor and its forest, the Misthalin Mystery Manor, Tempoross Cove.",
 		position = 7,
 		section = skySection
 	)
