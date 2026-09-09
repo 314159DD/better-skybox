@@ -1,7 +1,7 @@
 ![Better Skybox](docs/img/banner.png)
 
 <p align="center">
-  <a href="https://www.buymeacoffee.com/SteenC"><img src="docs/img/bmc-button.svg" alt="Buy me a Beer" height="50"></a>
+  <a href="https://www.buymeacoffee.com/314159DD"><img src="docs/img/bmc-button.svg" alt="Buy me a Beer" height="50"></a>
 </p>
 
 ![Day, sunset, night and dusk in Lumbridge](docs/img/showcase.png)
