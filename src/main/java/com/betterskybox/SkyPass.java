@@ -39,6 +39,7 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 import com.betterskybox.template.Template;
 import static org.lwjgl.opengl.GL33C.*;
@@ -66,6 +67,9 @@ class SkyPass
 
 	@Inject
 	private BetterSkyboxConfig config;
+
+	@Inject
+	private ConfigManager configManager;
 
 	@Inject
 	private Gson gson;
@@ -99,6 +103,8 @@ class SkyPass
 
 	void init(Template template)
 	{
+		// after the plugin's own sync mode and thread setup, so the ConfigChanged events land on a live context
+		GpuSettingsImport.run(configManager);
 		loads.start();
 		// context-wide, for every cubemap either sky samples
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
