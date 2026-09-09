@@ -134,6 +134,7 @@ class SkyPass
 	 */
 	boolean beginFrame(Scene scene)
 	{
+		proceduralSky.starMap(config.skyboxEnabled() && procedural() && config.starMap());
 		if (config.skyboxEnabled())
 		{
 			updateArea();

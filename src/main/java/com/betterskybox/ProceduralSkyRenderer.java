@@ -131,15 +131,31 @@ class ProceduralSkyRenderer
 		uniStarMap = glGetUniformLocation(program, "starMap");
 		uniStarMapEnabled = glGetUniformLocation(program, "starMapEnabled");
 		uniStarRot = glGetUniformLocation(program, "starRot");
-
-		stars = CubemapLoader.upload("stars", STAR_TEXTURE_UNIT);
 	}
 
 	void shutdownProgram()
 	{
+		starMap(false);
 		glDeleteProgram(program);
 		program = 0;
-		if (stars != null)
+	}
+
+	/**
+	 * Loads the 9.6 MB star map on the first frame it is wanted and frees it on the first frame it is not, so a
+	 * cubemap-only session never decodes it. Call every frame, on the client thread.
+	 */
+	void starMap(boolean wanted)
+	{
+		boolean load = wanted && program != 0;
+		if (load == (stars != null))
+		{
+			return;
+		}
+		if (load)
+		{
+			stars = CubemapLoader.upload("stars", STAR_TEXTURE_UNIT);
+		}
+		else
 		{
 			glDeleteTextures(stars.texture);
 			stars = null;
@@ -268,7 +284,8 @@ class ProceduralSkyRenderer
 		glUniform1f(uniFogTint, config.skyboxFogTint() / 100f);
 		glUniform1f(uniBrightness, config.skyboxBrightness() / 100f);
 		glUniform1f(uniFlash, flash);
-		boolean starMap = stars != null && config.starMap();
+		// loaded only while the star map setting is on, see starMap()
+		boolean starMap = stars != null;
 		glUniform1f(uniStarMapEnabled, starMap ? 1f : 0f);
 		if (starMap)
 		{
