@@ -30,7 +30,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Enumeration;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import javax.inject.Inject;
@@ -51,7 +50,8 @@ import okhttp3.Response;
  * removing the pack is deleting that folder.
  * <p>
  * One instance for the plugin ({@code @Singleton}). Every field is read and written on the client thread; the
- * download itself runs on RuneLite's scheduled executor and comes back through {@link ClientThread}.
+ * download itself runs on its own daemon thread, so it never occupies RuneLite's shared executor, and comes
+ * back through {@link ClientThread}.
  */
 @Slf4j
 @Singleton
@@ -69,9 +69,6 @@ class SkyPack
 
 	@Inject
 	private ChatMessageManager chatMessageManager;
-
-	@Inject
-	private ScheduledExecutorService executor;
 
 	/** Whether the pack is on disk, read every frame by {@link SkyPass}, so the marker is not stat'ed per frame. */
 	private boolean installed;
@@ -103,10 +100,12 @@ class SkyPack
 		}
 		downloading = true;
 		message("downloading the sky pack (about 35 MB), the skies come in when it lands");
-		executor.execute(() -> download(onInstalled));
+		Thread thread = new Thread(() -> download(onInstalled), "better-skybox-sky-pack");
+		thread.setDaemon(true);
+		thread.start();
 	}
 
-	/** Executor thread: fetch, unpack, mark, and hand the result back to the client thread either way. */
+	/** Download thread: fetch, unpack, mark, and hand the result back to the client thread either way. */
 	private void download(Runnable onInstalled)
 	{
 		try
