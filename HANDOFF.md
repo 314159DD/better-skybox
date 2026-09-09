@@ -4,8 +4,9 @@ Last wrap: 2026-09-09 late afternoon (crash recovery session)
 
 ## What this is
 RuneLite external plugin: the stock GPU renderer copied into `com.betterskybox`, plus a sky pass
-(cubemap texture or procedural day/night sky). Loaded into the official launcher via
-`build/libs/better-skybox-agent.jar` (`-javaagent`, see README).
+(cubemap texture or procedural day/night sky). Repo: https://github.com/314159DD/better-skybox (private
+until Steven flips it). Loaded into the official launcher via `build/libs/better-skybox-agent.jar`
+(`-javaagent`, see CONTRIBUTING.md); README.md is the hub-facing page, CONTRIBUTING.md the dev side.
 
 ## State
 1. DONE: cubemap sky (RS3 greenlands / magicblue / debug / custom folder), procedural sky with

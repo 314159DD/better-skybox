@@ -1,122 +1,150 @@
+![Better Skybox](docs/img/banner.png)
+
 # Better Skybox
 
-The stock RuneLite GPU plugin, copied into a sideloadable external plugin, plus a real sky:
-a cubemap texture or a procedural day/night sky. Cubemaps and the procedural sky model come from
-117 HD PRs #558 (RuffledPlume) and #655 (3-X).
+Real skies for the standard RuneLite GPU renderer: cubemap and procedural skies, a day/night cycle, moon phases,
+stars, weather, and per-area skies and fog.
 
-## Run (Jagex account, official launcher)
+<!-- Screenshots land here once they are captured on the sprint jar. Keep the three file names. -->
+| Lumbridge, day | Night with the star map | Wilderness lightning |
+| --- | --- | --- |
+| ![Lumbridge day](docs/img/lumbridge-day.png) | ![Night stars](docs/img/night-stars.png) | ![Wilderness lightning](docs/img/wilderness-lightning.png) |
 
-`build/libs/better-skybox-agent.jar` is a `-javaagent` that registers the plugin inside the launcher-managed
-client. The RuneLite launcher's own settings file, `settings.json` next to `RuneLite.exe`
-(`%LOCALAPPDATA%\RuneLite\settings.json`), needs launch mode JVM and the agent:
+## What it is
 
-```json
-{
-  "launchMode": "JVM",
-  "jvmArguments": ["-javaagent:<repo>\\build\\libs\\better-skybox-agent.jar"]
-}
-```
+Better Skybox is the standard GPU renderer with a sky pass on top: where the stock plugin fills the sky with a
+flat fog colour, this one draws a real sky, either a photographed cubemap or a procedural sky with a sun, a moon
+and stars that follow the time of day. It is not 117 HD; the game looks exactly like it does under the stock GPU
+plugin, and only the sky is different. Turn it on and the GPU plugin turns itself off, and your GPU settings are
+carried over, so nothing else about your client changes.
 
-Then start RuneLite from the Jagex Launcher as usual. Enable **Better Skybox** in the plugin list once;
-it declares a conflict with the stock GPU plugin (and 117 HD), so RuneLite switches those off by itself.
-Rebuild with `gradlew agentJar` and restart the client to pick up changes. Delete `settings.json` to go back to stock.
+## Why the download is 35 MB
 
-`run.bat` starts a dev client from Gradle instead (no Jagex login on this machine, legacy login only).
+The jar bundles 21 CC0 skies in full quality (13 from Poly Haven, 5 from ambientCG, 3 stylised ones from
+OpenGameArt) plus NASA's Deep Star Map for the procedural night sky. That is where the size goes. RuneLite
+downloads a plugin once and keeps it, so you pay the 35 MB one time, not on every start.
 
-## Settings (plugin panel)
+## Settings
 
-Five collapsible sections: **Renderer** (the stock GPU settings, closed by default), **Sky** (enable, sky type,
-overworld only, prefer game skybox), **Cubemap sky**, **Procedural sky** (closed by default) and **Fog and blending**
-(applies to both types). RuneLite cannot grey out settings, so pick the Sky type in the Sky section and open the
-matching section below it.
+The panel has five collapsible sections. RuneLite cannot grey out settings that do not apply, so pick the Sky type
+in the Sky section and open the matching section below it.
+
+- **Renderer** (closed by default): the stock GPU plugin's settings, draw distance to render threads. Filled from
+  your GPU plugin settings the first time Better Skybox starts.
+- **Sky**: the switch, the sky type (cubemap or procedural), the time of day, overworld only, lightning.
+- **Cubemap sky**: which bundled sky to show, the dawn/dusk/night companions, sky by area, the fades.
+- **Procedural sky** (closed by default): sun, moon, stars, clouds, night-sky extras, area moods.
+- **Fog and blending**: how the sky meets the terrain, for both sky types. Fog depth lives here too.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Enable sky | on | sky pass instead of the flat fog colour |
-| Sky type | CUBEMAP | CUBEMAP = texture, PROCEDURAL = gradient sky with sun, moon, stars |
-| Cubemap | PARTLY_CLOUDY | Twelve Poly Haven skies (PARTLY_CLOUDY .. NIGHT), five ambientCG skies (STORM_BREAK, DEEP_BLUE, PALE_MORNING, GOLDEN_HOUR, AURORA_NIGHT), three stylised OpenGameArt skies (TOON_BLUE, TOON_SUNSET, TOON_VIOLET), DEBUG, or CUSTOM. With Sky by area on, this is the fallback for unmapped areas |
-| Sky by time | on | cubemap: dawn/day/dusk/night follow the Time of day; areas may bring their own night or dusk sky |
-| Dawn / Dusk / Night cubemap | DAWN / SUNSET / NIGHT | cubemap: phase defaults for areas without their own |
-| Custom cubemap folder | | folder under `~/.runelite/better-skybox/<name>/`: six `px nx py ny pz nz .png`, or one `skybox.png` 4x2 atlas (px nz nx pz / py ny) |
-| Time of day (Sky section) | DAY | both sky types: DAY, SUNRISE, DAWN, SUNSET, DUSK, NIGHT, BLOOD_MOON, CLOCK (local time), CYCLE (full day in `Cycle length` minutes), CUSTOM (sliders) |
+| Enable sky | on | draw a sky instead of the flat fog colour |
+| Sky type | CUBEMAP | CUBEMAP is a texture, PROCEDURAL is a gradient sky with sun, moon and stars |
+| Time of day | DAY | for both sky types: DAY, SUNRISE, DAWN, SUNSET, DUSK, NIGHT, BLOOD_MOON, CLOCK (your local time), CYCLE (a full day in Cycle length minutes), CUSTOM (the sun sliders) |
+| Cycle length | 24 | Time of day = CYCLE: real minutes for one full day |
+| Overworld only | on | underground and in dungeons the flat colour stays |
+| Prefer game skybox | off | where the game ships its own skybox model, draw that instead |
+| Lightning | on | random flashes where 117 HD marks storms: high Wilderness, Barrows, Draynor Manor and its forest, the Misthalin Mystery Manor, Tempoross Cove |
+| Cubemap | PARTLY_CLOUDY | one of the 21 bundled skies, DEBUG, or CUSTOM for your own folder. With Sky by area on, this is the sky for unmapped areas |
+| Custom cubemap folder | | folder name under `~/.runelite/better-skybox/` used when Cubemap = CUSTOM |
+| Sky by time | on | dawn, day, dusk and night cubemaps follow the Time of day; day is the Cubemap above or the area's own sky |
+| Dawn / Dusk / Night cubemap | DAWN / SUNSET / NIGHT | the other three phases, unless an area brings its own |
+| Sky by area | on | sky and fog colour follow the map area you are in; unmapped areas use the Cubemap above |
+| Time fade | 4 | seconds to crossfade on a time-of-day or settings change |
+| Area fade | 8 | tiles to walk past an area border until the new sky is fully in; walking back reverses the blend |
+| Rotation / Drift speed | 0 / 0 | cubemap: fixed offset in degrees, drift in degrees per minute |
 | Sun altitude / azimuth | 30 / 235 | procedural, Time of day = CUSTOM |
+| Sun disk | on | procedural: draw the sun itself, not only its glow |
 | Moon, Stars | on | procedural |
-| Real star map | on | procedural: NASA Deep Star Map (Gaia DR2) turning with the time of day, instead of generated stars |
-| Cycle length | 24 | procedural, Time of day = CYCLE: real minutes per in-game day |
-| Lightning | on | Sky section: random flashes where 117 HD marks storms (Wilderness high, Barrows, Draynor Manor and its forest, the Misthalin Mystery Manor, Tempoross Cove) |
-| Sun disk | on | procedural: draw the sun itself, not only the glow |
-| Moon size / Moon phase | 100 / 100 | procedural, percent; phase 0 = new moon. Ignored under CLOCK and CYCLE, where the moon follows the calendar |
+| Moon size / Moon phase | 100 / 100 | procedural, percent; phase 0 is a new moon. Under CLOCK and CYCLE the moon follows the calendar instead |
+| Real star map | on | procedural: NASA's Deep Star Map (Gaia DR2) turning with the time of day, instead of generated stars |
 | Star brightness | 100 | procedural, percent |
 | Shooting stars, Nebula, Aurora | on / on / off | procedural night-sky extras |
-| Cloud cover / Cloud speed | 30 / 100 | procedural, percent; 0 cover = clear sky, 0 speed = still |
-| Area moods | on | Procedural section: let areas override Time of day (Morytania stays at dusk, Darkmeyer under a blood moon, the desert at high noon) |
-| Overworld only | on | underground keeps the flat colour |
-| Prefer game skybox | off | where Jagex ships a skybox model, draw that instead |
-| Fog colour | AUTO | AUTO (area fog from 117 HD's environment table, else game colour, else sky) / SKYBOX (sky horizon colour) / GAME (client colour, black without the Skybox colour plugin) / CUSTOM |
+| Cloud cover / Cloud speed | 30 / 100 | procedural, percent; 0 cover is a clear sky, 0 speed is still air |
+| Area moods | on | procedural: areas override the Time of day (Morytania stays at dusk, Darkmeyer under a blood moon, the desert at high noon) |
+| Fog depth | 0 | the stock terrain fog; 0 turns it off |
+| Fog colour | AUTO | AUTO takes the area's fog colour from 117 HD's tables, else the game colour, else the sky. SKYBOX uses the sky's horizon colour, GAME the client's colour (black without the Skybox colour plugin), CUSTOM the colour below |
 | Custom fog colour | light blue-grey | used with Fog colour = CUSTOM |
-| Horizon blend | 5 | width of the fog to sky fade above the horizon, 0 = off |
-| Fog tint | 15 | share of fog colour mixed into the sky |
+| Horizon blend | 5 | how far above the horizon the fog colour fades into the sky; 0 is off |
+| Horizon offset | 10 | degrees the sky horizon sits below the true horizon; raise it if a flat band shows above the terrain edge |
+| Fog tint | 15 | share of the fog colour mixed into the whole sky |
 | Sky brightness | 100 | multiplier in percent |
-| Rotation / Drift speed | 0 / 0 | cubemap: static offset in degrees, drift in degrees per minute |
-| Sky by area | on | pick sky and fog colour from the map area; 162 areas (117 HD tables plus our own continent boxes), 75 with their own sky |
-| Time fade | 4 | seconds for time-of-day and config changes |
-| Area fade | 8 | cubemap: tiles walked past a border until the new sky is fully in; walking back swaps the skies and carries the blend over. Teleports and time-of-day changes use Time fade instead |
 
-Terrain fog itself is "Fog depth" in the Fog and blending section; 0 turns it off.
-Draw distance, AA and the rest are the same as the stock GPU plugin but live in their own config group
-(`betterskybox`) under Renderer, so set them again once.
+On first start the plugin copies your stock GPU plugin settings (draw distance, anti-aliasing, FPS settings and
+the rest, 16 in all) into its Renderer section, once. After that the two plugins keep separate settings, so a
+change in one does not touch the other.
 
-## Sky by area
+## Area skies
 
-`src/main/resources/com/betterskybox/sky_areas.json` is generated by `tools/hd_to_sky_areas.py` from 117 HD's
-`areas.json` + `environments.json` (BSD-2, fetched into `ref/117hd/`). It keeps 117 HD's priority order and
-adds a cubemap per area from the `THEMES` table in the script; every entry also carries 117 HD's fog colour,
-which Fog colour = AUTO uses. Entry shape:
+With Sky by area on, the sky and the fog colour follow where you are. The area table comes from 117 HD's
+`areas.json` and `environments.json`: 162 areas, 75 with a sky of their own, every one with 117 HD's fog colour,
+which Fog colour = AUTO uses. Morytania is overcast, the Wilderness is storm clouds, the Kharidian desert is a
+clear hard blue, the Fremennik province has mountain air and its northern isles a snow sky, Tirannwn is misty,
+and the kingdoms of Misthalin, Asgarnia and Kandarin each get a day sky of their own.
 
-```json
-{"name":"MORYTANIA","sky":"kloofendal_overcast_puresky","fog":"#1e314b","aabbs":[[3432,3167,3775,3486,0,3]],"regions":[14131],"regionBoxes":[[54,54,55,56,0,3]]}
-```
+Areas can carry their own time-of-day set (a night or dusk sky that fits the place), a mood for the procedural
+sky (Morytania stays at dusk, Darkmeyer sits under a blood moon, the desert is always high noon) and lightning
+where 117 HD marks storms.
 
-`aabbs` are world tiles `[x1, y1, x2, y2, plane1, plane2]`, `regionBoxes` are region coordinates, all inclusive;
-first match wins. Drop a `sky_areas.json` into `~/.runelite/better-skybox/` to replace the bundled table without
-rebuilding. To change which sky an area gets, edit `THEMES` (or `EXTRA` for areas without a 117 HD environment)
-and rerun the script. The client log prints `Sky area: <name> sky=<sky> fog=<fog>` on every change.
+Crossing a border eases the sky over the next Area fade tiles; walking back reverses the blend rather than
+restarting it. A sky you have not seen yet in this session is decoded in the background while the current one
+stays on screen, so a border never freezes a frame. Teleports and time-of-day changes use the Time fade in
+seconds instead.
 
-## Adding skies
+## Custom skies
 
-`tools/polyhaven_to_cubemap.py` (needs `numpy`, `pillow`) turns a 2:1 equirectangular panorama into the six faces:
+Put your own sky in a folder under `~/.runelite/better-skybox/` (on Windows that is
+`%USERPROFILE%\.runelite\better-skybox\`):
 
 ```
-python tools/polyhaven_to_cubemap.py kloppenheim_06_puresky          # CC0 sky from Poly Haven, bundled
-python tools/polyhaven_to_cubemap.py --file pano.png --name swamp --custom   # local image, e.g. AI generated, to ~/.runelite/better-skybox/swamp/
+~/.runelite/better-skybox/<name>/px.png nx.png py.png ny.png pz.png nz.png
 ```
 
-`tools/starmap_to_cubemap.py` builds the `stars` cubemap (1024 px faces) from NASA's `starmap_2020_8k.exr` in `ref/nasa/`.
-`docs/research-sky-sources-2026-09-09.md` lists more sources (licenses, APIs) and 360-degree generators.
+Six square faces of the same size, or a single `skybox.png` atlas of 4x2 faces laid out as `px nz nx pz` on the
+top row and `py ny` on the bottom row. Then set Cubemap = CUSTOM and type the folder name into Custom cubemap
+folder. If the folder cannot be read the plugin falls back to the bundled sky and says so once in the chat box:
+`Better Skybox: custom sky folder <name> not found, using PARTLY_CLOUDY` (or `no custom sky folder set` while the
+name is empty).
 
-Bundled skies also need an entry in `BetterSkyboxConfig.SkyboxTexture`; custom folders are picked with
-Cubemap = CUSTOM plus the folder name, or referenced by folder name from `sky_areas.json`.
-Poly Haven's `*_puresky` assets are sky-only panoramas and convert cleanly; anything with ground in it
-shows that ground below the horizon.
+A folder named like a bundled sky (for example `qwantani_night_puresky`) replaces that sky wherever it is used,
+including in the area table.
 
-## Layout
+To change which sky an area gets, drop your own `sky_areas.json` into `~/.runelite/better-skybox/`; it replaces
+the bundled table without a rebuild. The bundled file, and the script that generates it, are described in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
-- `src/main/java/com/betterskybox/` copy of `net.runelite.client.plugins.gpu` (renamed), plus
-  `CubemapLoader.java` (png folders to GL cubemaps), `SkyboxRenderer.java` (cubemap cache + crossfade), `ProceduralSkyRenderer.java` (gradient sky + star map), `SkyAreas.java` (position to sky/fog table), `Agent.java` (launcher hook)
-- `src/main/resources/com/betterskybox/` GPU shaders, `sky_vert.glsl`, `sky_frag.glsl`, `proc_sky_frag.glsl`,
-  `sky_gradient.json`, `sky_areas.json`, `skybox/<name>/` textures
-- `ref/` (gitignored) sparse RuneLite checkout, example-plugin template, PR 558 and PR 655 files, 117 HD JSON, downloaded panoramas
+## FAQ
 
-## Updating the client version
+**Does it work with 117 HD?** No. Both plugins replace the renderer, and RuneLite has one renderer slot, so
+the two cannot be on at the same time. Better Skybox is for players who want the vanilla look with a sky.
 
-`build.gradle` pins `runeLiteVersion`. The 33 files copied from RuneLite's GPU plugin are regenerated, never
-hand edited: `python tools/sync_upstream.py --check` proves the copy is upstream's, `--apply` pulls in a new
-client version. [SYNC.md](SYNC.md) has the pinned revision, the four rename rules and the intentional deltas.
+**Does it change the game's colours?** No. The terrain, models and lighting are drawn by the stock GPU code; the
+sky pass only touches the pixels behind the scene. Fog colour and fog depth are yours to set, as they are in the
+GPU plugin.
+
+**What does it cost in performance?** One extra full-screen pass per frame for the sky. It is not noticeable
+next to the scene itself. Cubemaps are decoded on a background thread, and the 10 MB star map is only loaded
+while the procedural sky is on with Real star map enabled.
+
+**Why does the GPU plugin switch off when I turn this on?** RuneLite lets one plugin draw the scene at a time.
+Better Skybox contains the stock renderer, so nothing is lost; turn it off and the GPU plugin comes back.
+
+**Where are my GPU settings?** In the Renderer section, closed by default. They were copied from the GPU plugin
+the first time Better Skybox started.
+
+**Can I use RuneScape 3's skies?** They are not bundled (Jagex assets). If you own the game files and have
+ripped a set, drop it into a custom folder and pick CUSTOM.
 
 ## Credits
 
-- Stock GPU renderer: RuneLite (BSD-2). Cubemap and procedural sky model: 117 HD PRs #558 (RuffledPlume) and #655 (3-X), BSD-2.
-- Area and fog tables: 117 HD `areas.json` / `environments.json`, BSD-2-Clause.
-- Sky panoramas: Poly Haven (CC0), ambientCG (CC0), Screaming Brain Studios "Cloudy Skyboxes" on OpenGameArt (CC0).
-- Star map: NASA/Goddard Space Flight Center Scientific Visualization Studio, Deep Star Maps 2020. Gaia DR2: ESA/Gaia/DPAC.
-- RuneScape 3 sky rips are not bundled (Jagex assets). Drop a ripped set into a custom folder and pick CUSTOM if you own the game files.
+- Stock GPU renderer: [RuneLite](https://github.com/runelite/runelite), BSD-2-Clause.
+- Cubemap and procedural sky model: 117 HD pull requests #558 (RuffledPlume) and #655 (3-X), BSD-2-Clause.
+- Area and fog tables: 117 HD `areas.json` and `environments.json`, BSD-2-Clause.
+- Sky panoramas: [Poly Haven](https://polyhaven.com) (CC0), [ambientCG](https://ambientcg.com) (CC0),
+  Screaming Brain Studios "Cloudy Skyboxes" on [OpenGameArt](https://opengameart.org) (CC0).
+- Star map: NASA/Goddard Space Flight Center Scientific Visualization Studio,
+  [Deep Star Maps 2020](https://svs.gsfc.nasa.gov/4851). Star data: Gaia DR2, ESA/Gaia/DPAC.
+
+Full attribution per file is in [NOTICE](NOTICE). Better Skybox itself is BSD-2-Clause, see [LICENSE](LICENSE).
+Bugs and ideas go to the [issue tracker](https://github.com/314159DD/better-skybox/issues); how to build and
+hack on it is in [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -1,0 +1,151 @@
+# Contributing to Better Skybox
+
+Everything a player needs is in [README.md](README.md). This file is for building the plugin, running it against
+a client, keeping the copied renderer in sync with RuneLite, and adding skies.
+
+## Dev setup
+
+Java 11 and Gradle, via the wrapper. IntelliJ: open the repo as a Gradle project and let it import; the Gradle
+tasks below are then available from the Gradle tool window. Command line: `gradlew.bat` on Windows, `./gradlew`
+elsewhere. RuneLite artifacts come from `repo.runelite.net`; the first build downloads the pinned client version
+(`runeLiteVersion` in `build.gradle`).
+
+| Task | What it produces |
+| --- | --- |
+| `gradlew jar` | `build/libs/better-skybox-<version>.jar`, the hub artifact (plugin classes and resources only) |
+| `gradlew test` | the unit tests, no GL context needed |
+| `gradlew run` | a dev client with the plugin built in (`run.bat` is the same thing) |
+| `gradlew agentJar` | `build/libs/better-skybox-agent.jar`, the `-javaagent` for the official launcher (below) |
+
+`gradlew clean test jar --offline -q` is the check to run before a commit. The hub build ignores
+`build.gradle` and compiles `src/main` on its own (`build=standard`), so nothing outside `src/main` may be needed
+by the plugin: the launcher agent lives in its own source set, `src/agent/java`, for that reason.
+
+## Running against a client
+
+`gradlew run` starts RuneLite from Gradle through `BetterSkyboxPluginTest` in developer mode, with the plugin
+registered as a builtin. That is the fastest loop, but it is the bare client, not the launcher, so a Jagex
+account can only log in if `~/.runelite/credentials.properties` already holds a valid token.
+
+### Sideloading into the Jagex launcher
+
+`build/libs/better-skybox-agent.jar` is a `-javaagent` that registers the plugin inside the launcher-managed
+client. The RuneLite launcher's own settings file, `settings.json` next to `RuneLite.exe`
+(`%LOCALAPPDATA%\RuneLite\settings.json`), needs launch mode JVM and the agent:
+
+```json
+{
+  "launchMode": "JVM",
+  "jvmArguments": ["-javaagent:<repo>\\build\\libs\\better-skybox-agent.jar"]
+}
+```
+
+Then start RuneLite from the Jagex Launcher as usual. Enable **Better Skybox** in the plugin list once;
+it declares a conflict with the stock GPU plugin (and 117 HD), so RuneLite switches those off by itself.
+Rebuild with `gradlew agentJar` and restart the client to pick up changes. Delete `settings.json` to go back to stock.
+
+The agent (`src/agent/java/com/betterskybox/Agent.java`) sets `ExternalPluginManager.builtinExternals` by
+reflection in `premain`, which is what the Gradle test runner does too, minus the `-ea` it insists on.
+
+## Layout
+
+- `src/main/java/com/betterskybox/`: the renamed copy of `net.runelite.client.plugins.gpu` (see the next
+  section), plus the sky itself: `SkyPass` (the hook the plugin calls; init, per-frame decisions, area lookup,
+  cubemap selection), `SkyboxRenderer` (cubemap cache and crossfade), `ProceduralSkyRenderer` (gradient sky and
+  star map), `CubemapLoader` (decode and upload halves) and `CubemapLoads` (the loader thread), `SkyAreas` (the
+  area table), `SkyClock` (time of day and moon), `Lightning`, `BorderBlend`, `GpuSettingsImport`.
+- `src/main/resources/com/betterskybox/`: the GPU shaders, `sky_vert.glsl`, `sky_frag.glsl`,
+  `proc_sky_frag.glsl`, `sky_gradient.json`, `sky_areas.json`, and the bundled cubemaps under `skybox/<name>/`.
+- `src/agent/java/`: the launcher agent, excluded from the hub jar.
+- `src/test/java/`: JUnit 4 tests.
+- `tools/`: the Python scripts below. `patches/`: the two hook patches for the sync script.
+- `ref/` (gitignored): the RuneLite checkout the sync script reads, 117 HD PR 558 and 655 files, downloaded
+  panoramas.
+
+## Keeping the renderer in sync with RuneLite
+
+33 files under `src/main` are copies of RuneLite's GPU plugin and are never hand edited. `tools/sync_upstream.py`
+regenerates them from a RuneLite checkout by applying four rename rules and, for the two files that carry hooks,
+a patch from `patches/`:
+
+```
+python tools/sync_upstream.py --check           # exit 1 if any copied file has drifted; prints the diff
+python tools/sync_upstream.py --apply           # regenerate the copied files from upstream + patches
+python tools/sync_upstream.py --update-patches  # rewrite patches/ from the current src/
+```
+
+Python 3, standard library only, plus `git apply` on the PATH; `--upstream <path>` points at a checkout other
+than `ref/runelite`. Run `--check` before every commit that touches a copied file; if you had to edit one of the
+two hook files, run `--update-patches` in the same commit. [SYNC.md](SYNC.md) has the pinned revision, the
+rename rules, the list of copied files, the seven plugin hooks and the reason the config is patched rather than
+extended. Bumping the client version is a three-step recipe there.
+
+## Area table
+
+`src/main/resources/com/betterskybox/sky_areas.json` is generated by `tools/hd_to_sky_areas.py` from 117 HD's
+`areas.json` and `environments.json` (BSD-2-Clause, fetched into `ref/117hd/`). It keeps 117 HD's priority order
+and adds a cubemap per area from the `THEMES` table in the script; every entry also carries 117 HD's fog colour.
+Entry shape:
+
+```json
+{"name":"MORYTANIA","sky":"kloofendal_overcast_puresky","fog":"#1e314b","aabbs":[[3432,3167,3775,3486,0,3]],"regions":[14131],"regionBoxes":[[54,54,55,56,0,3]]}
+```
+
+`aabbs` are world tiles `[x1, y1, x2, y2, plane1, plane2]`, `regionBoxes` are region coordinates (two corner
+region ids of a box, not an id range), all inclusive; first match wins. Entries may also carry `preset` (a
+procedural mood), `skyDawn`, `skyDusk` and `skyNight`, and `lightning`. To change which sky an area gets, edit `THEMES` (or
+`EXTRA` for areas without a 117 HD environment, which is where the Misthalin, Asgarnia and Kandarin boxes and the
+islands come from) and rerun the script. `SkyAreasTest` pins the lookup at 19 world points and the priority
+order of a few nested areas, so a regenerated table that reorders them fails the build. The client log prints
+`Sky area: <name> sky=<sky> fog=<fog>` at debug level on every change.
+
+## Adding a bundled sky
+
+`tools/polyhaven_to_cubemap.py` (needs `numpy` and `pillow`) turns a 2:1 equirectangular panorama into six
+faces:
+
+```
+python tools/polyhaven_to_cubemap.py kloppenheim_06_puresky               # CC0 sky from Poly Haven, into the resources
+python tools/polyhaven_to_cubemap.py --file pano.png --name swamp --custom  # local image, to ~/.runelite/better-skybox/swamp/
+```
+
+A bundled sky also needs a constant in `BetterSkyboxConfig.SkyboxTexture` (the enum's `dir` is the folder name),
+a line in `NOTICE`, and `ResourceIntegrityTest` will then assert that its six faces exist. Poly Haven's
+`*_puresky` assets are sky-only panoramas and convert cleanly; anything with ground in it shows that ground below
+the horizon. Poly Haven and ambientCG both require a `User-Agent` header (the script sets one).
+
+`tools/starmap_to_cubemap.py` builds the `stars` cubemap (1024 px faces) from NASA's `starmap_2020_8k.exr` in
+`ref/nasa/`; it reads the EXR through OpenCV with `OPENCV_IO_ENABLE_OPENEXR=1`.
+`docs/research-sky-sources-2026-09-09.md` lists more sources with their licences.
+
+## Code style
+
+- Tabs, Allman braces, Java 11: the same style as the RuneLite client, since two thirds of the source is a copy
+  of it. The copied files are not the place for style changes at all; they must match upstream after the rename
+  rules.
+- No em dashes (U+2014) anywhere in the repo, source, docs or commit messages. Check with
+  `grep -rn $'\xe2\x80\x94' src/ docs/ *.md` before a commit.
+- No defensive branches for states that cannot occur. Bundled resources are integrity-tested; do not add a
+  fallback for a missing one.
+- Every file this plugin owns carries the BSD-2-Clause header with Steven Obst as the holder; copied files keep
+  their RuneLite headers.
+
+## Tests
+
+`gradlew test` runs the JUnit 4 suite (62 tests at the time of writing). They are all pure Java: no GL context,
+no client, so they run on CI. The seams that make that possible are worth knowing before you add to them:
+
+- `CubemapLoads.start(ExecutorService, Consumer<Runnable>)` takes a test executor (`QueuedExecutor`) and a
+  list standing in for the client thread, and `SkyboxRenderer(Loader, CubemapLoads)` takes a decode/upload stub,
+  so the async load order, the supersede rule and the failed set are tested without threads or GL.
+- `SkyAreas.bundled(gson)` reads the jar copy of the area table, ignoring a `~/.runelite/better-skybox/`
+  override on the developer's machine.
+- `SkyClock(LongSupplier)` takes an injected clock for the CYCLE tests.
+- `ProceduralSkyRenderer.loadGradient(gson)` and `evaluate` are reachable without a GL program.
+- `ConfigContractTest` reflects over `BetterSkyboxConfig`: unique keys, every item in a section, every
+  `getKey().equals("...")` literal in the plugin and `SkyPass` a declared key.
+- `ResourceIntegrityTest` and `SkyAreasIntegrityTest` prove every bundled folder and every area entry resolves.
+
+What cannot be unit tested and needs a run in game: the shaders, the GL upload, the star map load, the feel of a
+border crossing and the settings import against a real profile. The in-game checklist for a release is in
+`HANDOFF.md`.
