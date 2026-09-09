@@ -35,6 +35,7 @@ import net.runelite.api.Player;
 import net.runelite.api.Scene;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.events.ConfigChanged;
 import com.betterskybox.template.Template;
 import static org.lwjgl.opengl.GL33C.*;
@@ -54,6 +55,9 @@ class SkyPass
 
 	@Inject
 	private Client client;
+
+	@Inject
+	private ClientThread clientThread;
 
 	@Inject
 	private BetterSkyboxConfig config;
@@ -203,7 +207,7 @@ class SkyPass
 		if (configChanged.getKey().equals("skyboxCubemap") || configChanged.getKey().equals("skyboxCustomName"))
 		{
 			// the cubemap itself is selected per frame in beginFrame; just allow a fixed folder another try
-			skyboxRenderer.retryFailed();
+			clientThread.invokeLater(skyboxRenderer::retryFailed);
 		}
 	}
 
@@ -281,9 +285,9 @@ class SkyPass
 		return texture == BetterSkyboxConfig.SkyboxTexture.CUSTOM ? config.skyboxCustomName().trim() : texture.dir;
 	}
 
-	private int skyHorizonColor()
+	private int skyHorizonColor(int gameSkyColor)
 	{
-		return procedural() ? proceduralSky.getHorizonColor() : skyboxRenderer.getHorizonColor();
+		return procedural() ? proceduralSky.getHorizonColor() : skyboxRenderer.getHorizonColor(gameSkyColor);
 	}
 
 	private int baseFogColor(int gameSkyColor)
@@ -295,7 +299,7 @@ class SkyPass
 		switch (config.skyboxFogColorMode())
 		{
 			case SKYBOX:
-				return skyHorizonColor();
+				return skyHorizonColor(gameSkyColor);
 			case GAME:
 				return gameSkyColor;
 			case CUSTOM:
@@ -305,7 +309,7 @@ class SkyPass
 				{
 					return currentArea.fogColor;
 				}
-				return gameSkyColor == 0 ? skyHorizonColor() : gameSkyColor;
+				return gameSkyColor == 0 ? skyHorizonColor(gameSkyColor) : gameSkyColor;
 		}
 	}
 

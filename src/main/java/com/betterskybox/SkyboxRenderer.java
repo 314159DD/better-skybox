@@ -25,7 +25,10 @@
 package com.betterskybox;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import com.betterskybox.CubemapLoader.Cubemap;
 import com.betterskybox.template.Template;
@@ -45,9 +48,16 @@ class SkyboxRenderer
 	static final int TEXTURE_UNIT = 2;
 	static final int PREV_TEXTURE_UNIT = 3;
 
+	/** Decodes and uploads a cubemap folder; {@link CubemapLoader#upload} in the client, a stub in tests. */
+	interface Loader
+	{
+		Cubemap upload(String name, int textureUnit);
+	}
+
+	private final Loader loader;
 	private int program;
 	private final Map<String, Cubemap> loaded = new HashMap<>();
-	private String failedName;
+	private final Set<String> failed = new HashSet<>();
 	private Cubemap current;
 	private Cubemap previous;
 	private long fadeStartNanos;
@@ -67,6 +77,17 @@ class SkyboxRenderer
 	private int uniRotation;
 
 	private final long startNanos = System.nanoTime();
+
+	@Inject
+	SkyboxRenderer()
+	{
+		this(CubemapLoader::upload);
+	}
+
+	SkyboxRenderer(Loader loader)
+	{
+		this.loader = loader;
+	}
 
 	void initProgram(Template template) throws ShaderException
 	{
@@ -96,17 +117,17 @@ class SkyboxRenderer
 	 */
 	boolean select(String name, float fadeSeconds)
 	{
-		if (name.isEmpty() || name.equals(failedName))
+		if (name.isEmpty() || failed.contains(name))
 		{
 			return false;
 		}
 		Cubemap next = loaded.get(name);
 		if (next == null)
 		{
-			next = CubemapLoader.upload(name, TEXTURE_UNIT);
+			next = loader.upload(name, TEXTURE_UNIT);
 			if (next == null)
 			{
-				failedName = name;
+				failed.add(name);
 				return false;
 			}
 			loaded.put(name, next);
@@ -128,10 +149,10 @@ class SkyboxRenderer
 		blendOverride = t;
 	}
 
-	/** Forget the last failed name so a fixed folder gets another attempt. */
+	/** Forgets every failed name so a fixed folder gets another attempt. Call on the client thread. */
 	void retryFailed()
 	{
-		failedName = null;
+		failed.clear();
 	}
 
 	void freeTextures()
@@ -143,7 +164,7 @@ class SkyboxRenderer
 		loaded.clear();
 		current = null;
 		previous = null;
-		failedName = null;
+		failed.clear();
 	}
 
 	boolean isReady()
@@ -182,10 +203,14 @@ class SkyboxRenderer
 
 	/**
 	 * Horizon colour of the cubemap being shown, packed as 0xRRGGBB, blended during a fade. Used as the fog colour
-	 * so terrain fog and the sky fade meet in the same tone.
+	 * so terrain fog and the sky fade meet in the same tone. {@code fallback} while no cubemap has loaded yet.
 	 */
-	int getHorizonColor()
+	int getHorizonColor(int fallback)
 	{
+		if (current == null)
+		{
+			return fallback;
+		}
 		float t = blend();
 		if (t >= 1f)
 		{
