@@ -307,8 +307,6 @@ public interface GpuSkyboxConfig extends Config
 
 	enum SkyboxTexture
 	{
-		RS3_GREENLANDS("rs3_greenlands"),
-		RS3_MAGICBLUE("rs3_magicblue"),
 		PARTLY_CLOUDY("kloofendal_48d_partly_cloudy_puresky"),
 		CLEAR("syferfontein_18d_clear_puresky"),
 		OVERCAST("kloofendal_overcast_puresky"),
@@ -400,13 +398,13 @@ public interface GpuSkyboxConfig extends Config
 	@ConfigItem(
 		keyName = "skyboxCubemap",
 		name = "Cubemap",
-		description = "Bundled cubemap (RS3 rips or Poly Haven CC0 skies), or CUSTOM to use the folder named below. With Sky by area on, this is the sky for unmapped areas.",
+		description = "Bundled CC0 cubemap (Poly Haven, ambientCG, OpenGameArt), or CUSTOM to use the folder named below. With Sky by area on, this is the sky for unmapped areas.",
 		position = 1,
 		section = cubemapSection
 	)
 	default SkyboxTexture skyboxTexture()
 	{
-		return SkyboxTexture.RS3_GREENLANDS;
+		return SkyboxTexture.PARTLY_CLOUDY;
 	}
 
 	@ConfigItem(

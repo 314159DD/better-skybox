@@ -34,7 +34,7 @@ matching section below it.
 | --- | --- | --- |
 | Enable sky | on | sky pass instead of the flat fog colour |
 | Sky type | CUBEMAP | CUBEMAP = texture, PROCEDURAL = gradient sky with sun, moon, stars |
-| Cubemap | RS3_GREENLANDS | RS3 rips, twelve Poly Haven skies (PARTLY_CLOUDY .. NIGHT), five ambientCG skies (STORM_BREAK, DEEP_BLUE, PALE_MORNING, GOLDEN_HOUR, AURORA_NIGHT), three stylised OpenGameArt skies (TOON_BLUE, TOON_SUNSET, TOON_VIOLET), DEBUG, or CUSTOM. With Sky by area on, this is the fallback for unmapped areas |
+| Cubemap | PARTLY_CLOUDY | Twelve Poly Haven skies (PARTLY_CLOUDY .. NIGHT), five ambientCG skies (STORM_BREAK, DEEP_BLUE, PALE_MORNING, GOLDEN_HOUR, AURORA_NIGHT), three stylised OpenGameArt skies (TOON_BLUE, TOON_SUNSET, TOON_VIOLET), DEBUG, or CUSTOM. With Sky by area on, this is the fallback for unmapped areas |
 | Sky by time | on | cubemap: dawn/day/dusk/night follow the Time of day; areas may bring their own night or dusk sky |
 | Dawn / Dusk / Night cubemap | DAWN / SUNSET / NIGHT | cubemap: phase defaults for areas without their own |
 | Custom cubemap folder | | folder under `~/.runelite/gpu-skybox/<name>/`: six `px nx py ny pz nz .png`, or one `skybox.png` 4x2 atlas (px nz nx pz / py ny) |
@@ -118,4 +118,4 @@ shows that ground below the horizon.
 - Area and fog tables: 117 HD `areas.json` / `environments.json`, BSD-2-Clause.
 - Sky panoramas: Poly Haven (CC0), ambientCG (CC0), Screaming Brain Studios "Cloudy Skyboxes" on OpenGameArt (CC0).
 - Star map: NASA/Goddard Space Flight Center Scientific Visualization Studio, Deep Star Maps 2020. Gaia DR2: ESA/Gaia/DPAC.
-- `rs3_greenlands` and `rs3_magicblue` are RuneScape 3 assets, Jagex Ltd, personal use only.
+- RuneScape 3 sky rips are not bundled (Jagex assets). Drop a ripped set into a custom folder and pick CUSTOM if you own the game files.
