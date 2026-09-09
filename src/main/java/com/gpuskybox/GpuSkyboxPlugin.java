@@ -143,6 +143,7 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 	@Inject
 	private ProceduralSkyRenderer proceduralSky;
 	private final SkyAreas skyAreas = new SkyAreas();
+	private final SkyClock skyClock = new SkyClock();
 	private SkyAreas.Area currentArea;
 
 	@Inject
@@ -1127,7 +1128,7 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			&& (!config.skyboxOverworldOnly() || isOverworld());
 		if (draw && procedural())
 		{
-			proceduralSky.update(config);
+			proceduralSky.update(config, skyClock);
 		}
 		return draw;
 	}
@@ -1176,7 +1177,7 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			Mat4.mul(skyProj, Mat4.rotateY(cameraYaw));
 			if (procedural())
 			{
-				proceduralSky.draw(skyProj, sky, vaoUiHandle, config);
+				proceduralSky.draw(skyProj, sky, vaoUiHandle, config, skyClock);
 			}
 			else
 			{

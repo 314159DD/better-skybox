@@ -423,9 +423,9 @@ public interface GpuSkyboxConfig extends Config
 	@ConfigItem(
 		keyName = "skyPreset",
 		name = "Time of day",
-		description = "Procedural sky only. Presets set the sun position. CLOCK follows your local time, CYCLE runs a full day in the minutes set below, CUSTOM uses the sliders.",
-		position = 1,
-		section = proceduralSection
+		description = "Sets the sky's clock for both sky types. Presets fix the sun position, CLOCK follows your local time, CYCLE runs a full day in the minutes set below, CUSTOM uses the sun sliders in the Procedural section.",
+		position = 5,
+		section = skySection
 	)
 	default SkyPreset skyPreset()
 	{
@@ -437,7 +437,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "sunAltitude",
 		name = "Sun altitude",
 		description = "Procedural sky, Time of day = CUSTOM. Degrees above the horizon, negative is night.",
-		position = 3,
+		position = 1,
 		section = proceduralSection
 	)
 	default int sunAltitude()
@@ -450,7 +450,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "sunAzimuth",
 		name = "Sun azimuth",
 		description = "Procedural sky, Time of day = CUSTOM. Compass direction of the sun in degrees.",
-		position = 4,
+		position = 2,
 		section = proceduralSection
 	)
 	default int sunAzimuth()
@@ -462,7 +462,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "moonEnabled",
 		name = "Moon",
 		description = "Procedural sky: draw the moon.",
-		position = 6,
+		position = 4,
 		section = proceduralSection
 	)
 	default boolean moonEnabled()
@@ -474,7 +474,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "starsEnabled",
 		name = "Stars",
 		description = "Procedural sky: draw stars at night.",
-		position = 9,
+		position = 7,
 		section = proceduralSection
 	)
 	default boolean starsEnabled()
@@ -486,7 +486,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "starMap",
 		name = "Real star map",
 		description = "Procedural sky: use NASA's Deep Star Map (Gaia DR2, 1.7 billion stars) turning with the time of day instead of generated stars.",
-		position = 10,
+		position = 8,
 		section = proceduralSection
 	)
 	default boolean starMap()
@@ -499,8 +499,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "cycleMinutes",
 		name = "Cycle length",
 		description = "Procedural sky, Time of day = CYCLE. Real minutes for one full day.",
-		position = 2,
-		section = proceduralSection
+		position = 6,
+		section = skySection
 	)
 	default int cycleMinutes()
 	{
@@ -511,7 +511,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "sunDisk",
 		name = "Sun disk",
 		description = "Procedural sky: draw the sun itself, not just its glow.",
-		position = 5,
+		position = 3,
 		section = proceduralSection
 	)
 	default boolean sunDisk()
@@ -524,7 +524,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "moonSize",
 		name = "Moon size",
 		description = "Procedural sky: moon disk size in percent.",
-		position = 7,
+		position = 5,
 		section = proceduralSection
 	)
 	default int moonSize()
@@ -537,7 +537,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "moonPhase",
 		name = "Moon phase",
 		description = "Procedural sky: 0 = new moon, 100 = full moon.",
-		position = 8,
+		position = 6,
 		section = proceduralSection
 	)
 	default int moonPhase()
@@ -550,7 +550,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "starBrightness",
 		name = "Star brightness",
 		description = "Procedural sky: star intensity in percent.",
-		position = 11,
+		position = 9,
 		section = proceduralSection
 	)
 	default int starBrightness()
@@ -562,7 +562,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "shootingStars",
 		name = "Shooting stars",
 		description = "Procedural sky: occasional meteors at night.",
-		position = 12,
+		position = 10,
 		section = proceduralSection
 	)
 	default boolean shootingStars()
@@ -574,7 +574,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "nebula",
 		name = "Nebula",
 		description = "Procedural sky: faint coloured nebula clouds behind the stars.",
-		position = 13,
+		position = 11,
 		section = proceduralSection
 	)
 	default boolean nebula()
@@ -586,7 +586,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "aurora",
 		name = "Aurora",
 		description = "Procedural sky: northern lights at night.",
-		position = 14,
+		position = 12,
 		section = proceduralSection
 	)
 	default boolean aurora()
@@ -599,7 +599,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "cloudCover",
 		name = "Cloud cover",
 		description = "Procedural sky: how much of the sky is clouded, in percent. 0 = clear.",
-		position = 15,
+		position = 13,
 		section = proceduralSection
 	)
 	default int cloudCover()
@@ -612,7 +612,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "cloudSpeed",
 		name = "Cloud speed",
 		description = "Procedural sky: cloud drift speed in percent. 0 = still.",
-		position = 16,
+		position = 14,
 		section = proceduralSection
 	)
 	default int cloudSpeed()

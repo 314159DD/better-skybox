@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalTime;
 import lombok.extern.slf4j.Slf4j;
 import com.gpuskybox.CubemapLoader.Cubemap;
 import com.gpuskybox.GpuSkyboxConfig.SkyPreset;
@@ -52,8 +51,6 @@ class ProceduralSkyRenderer
 		uniMoonSize, uniMoonPhase, uniStarVisibility, uniStarBrightness, uniShootingStars, uniNebula, uniAurora,
 		uniSunDisk, uniCloudCover, uniCloudTime, uniTime, uniFogColor, uniHorizonBlend, uniFogTint, uniBrightness,
 		uniStarMap, uniStarMapEnabled, uniStarRot, uniHorizonOffset;
-
-	private final long startNanos = System.nanoTime();
 
 	// per-frame state, evaluated in update()
 	private final float[] zenith = new float[3];
@@ -124,45 +121,28 @@ class ProceduralSkyRenderer
 		return program != 0;
 	}
 
-	private float elapsedSeconds()
-	{
-		return (float) ((System.nanoTime() - startNanos) / 1e9);
-	}
-
 	/**
 	 * Evaluates sun/moon positions and gradient colours for this frame.
 	 */
-	void update(GpuSkyboxConfig config)
+	void update(GpuSkyboxConfig config, SkyClock clock)
 	{
 		SkyPreset preset = config.skyPreset();
+		hour = clock.hour(config);
 		float altitude, azimuth;
 		switch (preset)
 		{
 			case CLOCK:
-			{
-				LocalTime now = LocalTime.now();
-				hour = now.getHour() + now.getMinute() / 60f + now.getSecond() / 3600f;
-				altitude = altitudeForHour(hour);
-				azimuth = azimuthForHour(hour);
-				break;
-			}
 			case CYCLE:
-			{
-				float day = elapsedSeconds() / (config.cycleMinutes() * 60f);
-				hour = (6 + day * 24) % 24;
-				altitude = altitudeForHour(hour);
-				azimuth = azimuthForHour(hour);
+				altitude = SkyClock.altitudeForHour(hour);
+				azimuth = SkyClock.azimuthForHour(hour);
 				break;
-			}
 			case CUSTOM:
 				altitude = config.sunAltitude();
 				azimuth = config.sunAzimuth();
-				hour = hourForAzimuth(azimuth);
 				break;
 			default:
 				altitude = preset.altitude;
 				azimuth = preset.azimuth;
-				hour = hourForAzimuth(azimuth);
 		}
 		starRotation(hour, starRot);
 		direction(sunDir, altitude, azimuth);
@@ -185,23 +165,6 @@ class ProceduralSkyRenderer
 		evaluate(gradient.zenith, altitude, zenith);
 		evaluate(gradient.horizon, altitude, horizon);
 		evaluate(gradient.sunGlow, altitude, sunGlow);
-	}
-
-	/** Sun altitude in degrees for a 24h clock: -60 at midnight, +60 at noon. */
-	private static float altitudeForHour(float hour)
-	{
-		return (float) Math.sin((hour - 6) / 24 * 2 * Math.PI) * 60;
-	}
-
-	/** East at 6h, south at noon, west at 18h. */
-	private static float azimuthForHour(float hour)
-	{
-		return 90 + (hour - 6) * 15;
-	}
-
-	private static float hourForAzimuth(float azimuth)
-	{
-		return ((azimuth - 90) / 15 + 6 + 24) % 24;
 	}
 
 	/**
@@ -231,9 +194,9 @@ class ProceduralSkyRenderer
 		return Math.round(horizon[0] * 255) << 16 | Math.round(horizon[1] * 255) << 8 | Math.round(horizon[2] * 255);
 	}
 
-	void draw(float[] skyProj, int fog, int quadVao, GpuSkyboxConfig config)
+	void draw(float[] skyProj, int fog, int quadVao, GpuSkyboxConfig config, SkyClock clock)
 	{
-		float seconds = elapsedSeconds();
+		float seconds = clock.elapsedSeconds();
 
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(false);
