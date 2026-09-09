@@ -36,7 +36,7 @@ RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, pl
    cubemaps (dawn/day/dusk/night per area with global phase defaults), lightning flashes in 117 HD storm
    areas (sky and fog), area moods (areas force a procedural preset over Time of day), and border blending
    by distance (Area fade is now tiles walked past the border, not seconds; stepping back reverses instead
-   of restarting). Commit REPLACE_WITH_HASH. Themed AI skies are still off the table (Blockade Labs
+   of restarting). Commit 29de069. Themed AI skies are still off the table (Blockade Labs
    declined); Spacescape (MIT), Kenney stylised sets and an ambientCG sweep remain open candidates for a
    later round.
 
