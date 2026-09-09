@@ -100,15 +100,7 @@ class ProceduralSkyRenderer
 	 */
 	void initProgram(Template template, Gson gson) throws ShaderException, IOException
 	{
-		try (InputStream in = ProceduralSkyRenderer.class.getResourceAsStream("sky_gradient.json"))
-		{
-			gradient = gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Gradient.class);
-		}
-		catch (JsonParseException ex)
-		{
-			throw new IOException("sky_gradient.json invalid", ex);
-		}
-
+		gradient = loadGradient(gson);
 		program = PROGRAM.compile(template);
 		uniSkyProj = glGetUniformLocation(program, "skyProj");
 		uniZenith = glGetUniformLocation(program, "zenithColor");
@@ -138,6 +130,21 @@ class ProceduralSkyRenderer
 		uniStarMap = glGetUniformLocation(program, "starMap");
 		uniStarMapEnabled = glGetUniformLocation(program, "starMapEnabled");
 		uniStarRot = glGetUniformLocation(program, "starRot");
+	}
+
+	/**
+	 * @throws IOException when the bundled gradient cannot be read or parsed
+	 */
+	static Gradient loadGradient(Gson gson) throws IOException
+	{
+		try (InputStream in = ProceduralSkyRenderer.class.getResourceAsStream("sky_gradient.json"))
+		{
+			return gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Gradient.class);
+		}
+		catch (JsonParseException ex)
+		{
+			throw new IOException("sky_gradient.json invalid", ex);
+		}
 	}
 
 	void shutdownProgram()
@@ -331,7 +338,8 @@ class ProceduralSkyRenderer
 		out[2] = (float) (Math.cos(az) * Math.cos(alt));
 	}
 
-	private static void evaluate(Keyframe[] keys, float altitude, float[] out)
+	/** Colour of the gradient at {@code altitude}: interpolated between its neighbouring keys, clamped past the ends. */
+	static void evaluate(Keyframe[] keys, float altitude, float[] out)
 	{
 		if (altitude <= keys[0].altitude)
 		{

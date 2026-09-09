@@ -24,12 +24,69 @@
  */
 package com.betterskybox;
 
+import com.google.gson.Gson;
+import java.io.IOException;
+import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 public class SkyAreasTest
 {
+	private static String bundledAreaAt(int x, int y, int plane) throws IOException
+	{
+		SkyAreas.Area area = new SkyAreas(SkyAreas.bundled(new Gson())).find(new WorldPoint(x, y, plane));
+		return area == null ? null : area.name;
+	}
+
+	@Test
+	public void landmarksResolveToTheirArea() throws IOException
+	{
+		assertEquals("VER_SINHAZA", bundledAreaAt(3660, 3220, 0));
+		assertEquals("BARROWS", bundledAreaAt(3550, 3300, 0));
+		assertEquals("MORYTANIA", bundledAreaAt(3700, 3400, 0));
+		assertEquals("WILDERNESS_HIGH", bundledAreaAt(3100, 3950, 0));
+		assertEquals("WILDERNESS_LOW", bundledAreaAt(3100, 3560, 0));
+		assertEquals("KHARIDIAN_DESERT_DEEP", bundledAreaAt(3250, 2900, 0));
+		// Lumbridge and Falador fall through to the kingdom boxes at the end of the table
+		assertEquals("Misthalin", bundledAreaAt(3222, 3218, 0));
+		assertEquals("Asgarnia", bundledAreaAt(2965, 3380, 0));
+	}
+
+	@Test
+	public void aSpecificAreaWinsOverTheBoxThatContainsIt() throws IOException
+	{
+		// Darkmeyer and Meiyerditch sit inside the Morytania box; the table lists them first
+		assertEquals("DARKMEYER", bundledAreaAt(3600, 3350, 0));
+		assertEquals("MEIYERDITCH", bundledAreaAt(3600, 3250, 0));
+		// the Frozen Waste Plateau is a corner of the high Wilderness
+		assertEquals("FROZEN_WASTE_PLATEAU", bundledAreaAt(2960, 3930, 0));
+		// Al Kharid overlaps Misthalin's box and is listed before it
+		assertEquals("Al Kharid", bundledAreaAt(3290, 3180, 0));
+	}
+
+	@Test
+	public void regionsAndRegionBoxesMatchByRegionId() throws IOException
+	{
+		assertEquals("THE_INFERNO", bundledAreaAt(2270, 5340, 0));
+		assertEquals("REVENANT_CAVES", bundledAreaAt(3200, 10100, 0));
+	}
+
+	@Test
+	public void planeRangesAreHonoured() throws IOException
+	{
+		assertEquals("KALPHITE_LAIR", bundledAreaAt(3480, 9500, 2));
+		assertNull(bundledAreaAt(3480, 9500, 0));
+		assertEquals("THE_GAUNTLET_NORMAL", bundledAreaAt(1880, 5660, 1));
+		assertNull(bundledAreaAt(1880, 5660, 0));
+	}
+
+	@Test
+	public void unmappedTilesFindNothing() throws IOException
+	{
+		assertNull(bundledAreaAt(0, 0, 0));
+	}
+
 	@Test
 	public void phaseOverridesFallBackToTheDaySky()
 	{

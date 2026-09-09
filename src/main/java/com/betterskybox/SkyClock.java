@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.function.LongSupplier;
 import com.betterskybox.BetterSkyboxConfig.SkyPreset;
 
 /**
@@ -46,11 +47,24 @@ class SkyClock
 
 	private static final double SYNODIC_MONTH_DAYS = 29.530588;
 	private static final LocalDateTime REFERENCE_NEW_MOON = LocalDateTime.of(2000, 1, 6, 18, 14);
-	private final long startNanos = System.nanoTime();
+	private final LongSupplier nanoTime;
+	private final long startNanos;
+
+	SkyClock()
+	{
+		this(System::nanoTime);
+	}
+
+	/** @param nanoTime the clock source; the sky day starts at its first reading */
+	SkyClock(LongSupplier nanoTime)
+	{
+		this.nanoTime = nanoTime;
+		startNanos = nanoTime.getAsLong();
+	}
 
 	float elapsedSeconds()
 	{
-		return (float) ((System.nanoTime() - startNanos) / 1e9);
+		return (float) ((nanoTime.getAsLong() - startNanos) / 1e9);
 	}
 
 	/** Hour of the sky day in [0, 24). Presets map to the hour their sun azimuth implies. */

@@ -26,9 +26,6 @@ package com.betterskybox;
 
 import com.google.gson.Gson;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 import org.junit.Test;
@@ -43,11 +40,7 @@ public class SkyAreasIntegrityTest
 
 	private static SkyAreas.Area[] bundled() throws IOException
 	{
-		try (InputStream in = SkyAreas.class.getResourceAsStream("sky_areas.json"))
-		{
-			assertNotNull("sky_areas.json", in);
-			return new Gson().fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), SkyAreas.Area[].class);
-		}
+		return SkyAreas.bundled(new Gson());
 	}
 
 	@Test

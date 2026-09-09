@@ -27,6 +27,7 @@ package com.betterskybox;
 import com.google.gson.Gson;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -140,7 +141,17 @@ class SkyAreas
 		}
 	}
 
-	private Area[] areas = new Area[0];
+	private Area[] areas;
+
+	SkyAreas()
+	{
+		this(new Area[0]);
+	}
+
+	SkyAreas(Area[] areas)
+	{
+		this.areas = areas;
+	}
 
 	void load(Gson gson)
 	{
@@ -150,22 +161,14 @@ class SkyAreas
 			{
 				try (Reader in = new FileReader(CUSTOM_FILE, StandardCharsets.UTF_8))
 				{
-					areas = gson.fromJson(in, Area[].class);
+					areas = parse(in, gson);
 				}
 				log.info("Loaded {} sky areas from {}", areas.length, CUSTOM_FILE);
 			}
 			else
 			{
-				try (InputStream in = SkyAreas.class.getResourceAsStream("sky_areas.json"))
-				{
-					areas = gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Area[].class);
-				}
+				areas = bundled(gson);
 				log.info("Loaded {} bundled sky areas", areas.length);
-			}
-			for (Area a : areas)
-			{
-				a.fogColor = a.fog == null ? -1 : Integer.parseInt(a.fog.substring(1), 16);
-				a.presetValue = parsePreset(a.preset);
 			}
 		}
 		catch (Exception ex)
@@ -173,6 +176,26 @@ class SkyAreas
 			log.warn("sky_areas.json invalid, area skies disabled", ex);
 			areas = new Area[0];
 		}
+	}
+
+	/** The table shipped in the jar. */
+	static Area[] bundled(Gson gson) throws IOException
+	{
+		try (InputStream in = SkyAreas.class.getResourceAsStream("sky_areas.json"))
+		{
+			return parse(new InputStreamReader(in, StandardCharsets.UTF_8), gson);
+		}
+	}
+
+	private static Area[] parse(Reader in, Gson gson)
+	{
+		Area[] areas = gson.fromJson(in, Area[].class);
+		for (Area a : areas)
+		{
+			a.fogColor = a.fog == null ? -1 : Integer.parseInt(a.fog.substring(1), 16);
+			a.presetValue = parsePreset(a.preset);
+		}
+		return areas;
 	}
 
 	/** The first area containing this point, or null when unmapped. */

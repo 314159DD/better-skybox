@@ -25,6 +25,8 @@
 package com.betterskybox;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import com.betterskybox.BetterSkyboxConfig.SkyPreset;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -34,12 +36,23 @@ public class SkyClockTest
 {
 	private static BetterSkyboxConfig cfg(SkyPreset p)
 	{
+		return cfg(p, 24);
+	}
+
+	private static BetterSkyboxConfig cfg(SkyPreset p, int cycleMinutes)
+	{
 		return new BetterSkyboxConfig()
 		{
 			@Override
 			public SkyPreset skyPreset()
 			{
 				return p;
+			}
+
+			@Override
+			public int cycleMinutes()
+			{
+				return cycleMinutes;
 			}
 		};
 	}
@@ -104,6 +117,61 @@ public class SkyClockTest
 		assertEquals(6f, c.hour(cfg(SkyPreset.CYCLE)), 0.05f);
 		assertEquals(SkyClock.Phase.DAWN, SkyClock.phase(c.hour(cfg(SkyPreset.CYCLE))));
 		assertEquals(0f, c.moonIllumination(cfg(SkyPreset.CYCLE)), 0.01f);
+	}
+
+	@Test
+	public void cycleRunsTwoWholeDaysOnAnInjectedClock()
+	{
+		long[] nanos = {0};
+		SkyClock c = new SkyClock(() -> nanos[0]);
+		// one real minute per sky day, the in-game checklist setting
+		BetterSkyboxConfig config = cfg(SkyPreset.CYCLE, 1);
+		assertEquals(6f, c.hour(config), 1e-4f);
+
+		List<SkyClock.Phase> entered = new ArrayList<>();
+		SkyClock.Phase lastPhase = null;
+		float lastHour = c.hour(config);
+		int wraps = 0;
+		// half a second per step, 0.2 sky hours, for two full days
+		for (int step = 1; step <= 240; step++)
+		{
+			nanos[0] = step * 500_000_000L;
+			float hour = c.hour(config);
+			assertTrue("hour " + hour, hour >= 0f && hour < 24f);
+			if (hour < lastHour)
+			{
+				wraps++;
+			}
+			else
+			{
+				assertTrue("hour " + hour + " after " + lastHour, hour > lastHour);
+			}
+			SkyClock.Phase phase = SkyClock.phase(hour);
+			if (phase != lastPhase)
+			{
+				entered.add(phase);
+				lastPhase = phase;
+			}
+			lastHour = hour;
+		}
+		assertEquals(2, wraps);
+		// starting mid-dawn, each phase is entered once per day and dawn once more at the very end
+		assertEquals(List.of(
+			SkyClock.Phase.DAWN, SkyClock.Phase.DAY, SkyClock.Phase.DUSK, SkyClock.Phase.NIGHT,
+			SkyClock.Phase.DAWN, SkyClock.Phase.DAY, SkyClock.Phase.DUSK, SkyClock.Phase.NIGHT,
+			SkyClock.Phase.DAWN), entered);
+		// two whole days land back on the start hour, no drift
+		assertEquals(6f, c.hour(config), 1e-3f);
+	}
+
+	@Test
+	public void cycleMoonWaxesToFullAfterHalfASynodicMonthOfDays()
+	{
+		long[] nanos = {0};
+		SkyClock c = new SkyClock(() -> nanos[0]);
+		BetterSkyboxConfig config = cfg(SkyPreset.CYCLE, 1);
+		nanos[0] = (long) (29.530588 / 2 * 60 * 1e9);
+		assertEquals(1f, c.moonIllumination(config), 1e-3f);
 	}
 
 	@Test
