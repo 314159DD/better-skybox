@@ -1,0 +1,35 @@
+Better Skybox
+Copyright (c) 2026, Steven Obst
+Licensed under the BSD 2-Clause License (see LICENSE).
+
+This plugin bundles work from the following sources.
+
+RuneLite GPU plugin (net.runelite.client.plugins.gpu), BSD 2-Clause
+    The renderer under src/main/java/com/betterskybox/ (with its config, regions, template and
+    scale/colorblind shaders) is a renamed copy of the RuneLite client's GPU plugin. Each copied
+    file keeps its original header. Copyright holders as stated in those headers:
+    Adam <Adam@sigterm.info>, Abex, Lotto <https://github.com/devLotto>,
+    logarrhythmic <https://github.com/logarrhythmic>, Ben Poulson <https://github.com/benpoulson>.
+    https://github.com/runelite/runelite
+
+117 HD, BSD 2-Clause
+    Cubemap sky and the procedural sky model (gradient by sun altitude, haze, starfield, nebula,
+    aurora): 117 HD pull request #558 by RuffledPlume and #655 by 3-X.
+    Area and fog tables: 117 HD areas.json and environments.json, turned into sky_areas.json by
+    tools/hd_to_sky_areas.py.
+    https://github.com/117HD/RLHD
+
+Sky panoramas (the skybox/<name>/ cubemaps), all CC0 1.0 Universal
+    Poly Haven, https://polyhaven.com (drakensberg_solitary_mountain_puresky, industrial_sunset_puresky,
+    kloofendal_28d_misty_puresky, kloofendal_48d_partly_cloudy_puresky, kloofendal_overcast_puresky,
+    qwantani_dawn_puresky, qwantani_dusk_1_puresky, qwantani_moonrise_puresky, qwantani_night_puresky,
+    qwantani_sunset_puresky, snow_field_puresky, syferfontein_18d_clear_puresky, wasteland_clouds_puresky).
+    ambientCG, https://ambientcg.com (ambientcg_dayskyhdri055b, ambientcg_dayskyhdri060b,
+    ambientcg_eveningskyhdri046b, ambientcg_morningskyhdri013b, ambientcg_nightskyhdri007).
+    Screaming Brain Studios, "Cloudy Skyboxes" on OpenGameArt, https://opengameart.org
+    (oga_cloudy_blue, oga_cloudy_sunset, oga_cloudy_violet).
+
+Star map (skybox/stars/), public domain
+    NASA/Goddard Space Flight Center Scientific Visualization Studio, Deep Star Maps 2020.
+    Star data: Gaia DR2, ESA/Gaia/DPAC.
+    https://svs.gsfc.nasa.gov/4851
