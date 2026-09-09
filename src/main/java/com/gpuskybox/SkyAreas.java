@@ -32,6 +32,8 @@ class SkyAreas
 		String skyNight;
 		/** Fog colour as #RRGGBB, or null. */
 		String fog;
+		/** 117 HD lightningEffects: random flashes while the player is here. */
+		boolean lightning;
 		/** [x1, y1, x2, y2, plane1, plane2] in world tiles, inclusive. */
 		int[][] aabbs;
 		/** Region ids (x << 8 | y). */

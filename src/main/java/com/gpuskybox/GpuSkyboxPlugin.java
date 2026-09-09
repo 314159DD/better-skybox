@@ -144,6 +144,8 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 	private ProceduralSkyRenderer proceduralSky;
 	private final SkyAreas skyAreas = new SkyAreas();
 	private final SkyClock skyClock = new SkyClock();
+	private final Lightning lightning = new Lightning(new java.util.Random());
+	private float flash;
 	private SkyAreas.Area currentArea;
 
 	@Inject
@@ -1095,6 +1097,8 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			currentArea = area;
 			log.info("Sky area: {}", area == null ? "unmapped" : area.name + " sky=" + area.sky + " fog=" + area.fog);
 		}
+		boolean stormy = config.lightningEnabled() && currentArea != null && currentArea.lightning;
+		flash = lightning.intensity(skyClock.elapsedSeconds(), stormy);
 	}
 
 	/**
@@ -1161,7 +1165,7 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		return procedural() ? proceduralSky.getHorizonColor() : skyboxRenderer.getHorizonColor();
 	}
 
-	private int fogColor(boolean cubemap)
+	private int baseFogColor(boolean cubemap)
 	{
 		int sky = client.getSkyboxColor();
 		if (!cubemap)
@@ -1185,6 +1189,19 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		}
 	}
 
+	private int fogColor(boolean cubemap)
+	{
+		int base = baseFogColor(cubemap);
+		if (flash <= 0f)
+		{
+			return base;
+		}
+		int r = (base >> 16 & 0xFF) + Math.round((255 - (base >> 16 & 0xFF)) * flash * 0.6f);
+		int g = (base >> 8 & 0xFF) + Math.round((255 - (base >> 8 & 0xFF)) * flash * 0.6f);
+		int b = (base & 0xFF) + Math.round((255 - (base & 0xFF)) * flash * 0.6f);
+		return r << 16 | g << 8 | b;
+	}
+
 	private void drawSkybox(Scene scene, int sky, boolean cubemap, float cameraX, float cameraY, float cameraZ,
 		float cameraPitch, float cameraYaw, int viewportWidth, int viewportHeight)
 	{
@@ -1200,11 +1217,11 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			Mat4.mul(skyProj, Mat4.rotateY(cameraYaw));
 			if (procedural())
 			{
-				proceduralSky.draw(skyProj, sky, vaoUiHandle, config, skyClock);
+				proceduralSky.draw(skyProj, sky, vaoUiHandle, config, skyClock, flash);
 			}
 			else
 			{
-				skyboxRenderer.draw(skyProj, sky, vaoUiHandle, config);
+				skyboxRenderer.draw(skyProj, sky, vaoUiHandle, config, flash);
 			}
 
 			glUseProgram(glProgram);

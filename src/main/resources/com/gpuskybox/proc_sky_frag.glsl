@@ -27,6 +27,7 @@ uniform float horizonBlend;
 uniform float horizonOffset; // sine of the angle the sky horizon is pushed below the geometric one
 uniform float fogTint;
 uniform float brightness;
+uniform float flash;         // lightning, 0..1: lifts the whole sky towards white
 uniform samplerCube starMap;   // NASA Deep Star Map, black where there is no star
 uniform float starMapEnabled;  // 0/1
 uniform mat3 starRot;          // world view dir (y down) -> star map lookup
@@ -407,6 +408,7 @@ void main() {
   float t = horizonBlend <= 0.0 ? 1.0 : smoothstep(0.0, horizonBlend, up);
   sky = mix(fogColor.rgb, sky, t);
 
+  sky = mix(sky, vec3(1.0), flash * 0.7);
   sky += (hash2(gl_FragCoord.xy) - 0.5) / 255.0;
   FragColor = vec4(clamp(sky, 0.0, 1.0), 1.0);
 }

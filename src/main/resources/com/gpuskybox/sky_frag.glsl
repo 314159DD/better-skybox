@@ -8,6 +8,7 @@ uniform float horizonBlend;  // width of the fog -> sky fade above the horizon, 
 uniform float horizonOffset; // sine of the angle the sky horizon is pushed below the geometric one, so it starts behind the terrain edge
 uniform float fogTint;       // 0..1, share of fog colour mixed into the whole sky
 uniform float brightness;    // multiplier
+uniform float flash;         // lightning, 0..1: lifts the whole sky towards white
 uniform float rotation;      // radians around the vertical axis
 
 in vec3 fDir;
@@ -27,5 +28,6 @@ void main() {
   sky = mix(sky, fogColor.rgb, fogTint);
 
   float t = smoothstep(0.0, max(horizonBlend, 0.001), up);
-  FragColor = vec4(mix(fogColor.rgb, sky, t), 1.0);
+  vec3 outSky = mix(fogColor.rgb, sky, t);
+  FragColor = vec4(mix(outSky, vec3(1.0), flash * 0.7), 1.0);
 }

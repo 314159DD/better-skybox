@@ -50,7 +50,7 @@ class ProceduralSkyRenderer
 	private int uniSkyProj, uniZenith, uniHorizon, uniSun, uniSunDir, uniMoonDir, uniMoonColor, uniMoonVisibility,
 		uniMoonSize, uniMoonPhase, uniStarVisibility, uniStarBrightness, uniShootingStars, uniNebula, uniAurora,
 		uniSunDisk, uniCloudCover, uniCloudTime, uniTime, uniFogColor, uniHorizonBlend, uniFogTint, uniBrightness,
-		uniStarMap, uniStarMapEnabled, uniStarRot, uniHorizonOffset;
+		uniFlash, uniStarMap, uniStarMapEnabled, uniStarRot, uniHorizonOffset;
 
 	// per-frame state, evaluated in update()
 	private final float[] zenith = new float[3];
@@ -98,6 +98,7 @@ class ProceduralSkyRenderer
 		uniHorizonOffset = glGetUniformLocation(program, "horizonOffset");
 		uniFogTint = glGetUniformLocation(program, "fogTint");
 		uniBrightness = glGetUniformLocation(program, "brightness");
+		uniFlash = glGetUniformLocation(program, "flash");
 		uniStarMap = glGetUniformLocation(program, "starMap");
 		uniStarMapEnabled = glGetUniformLocation(program, "starMapEnabled");
 		uniStarRot = glGetUniformLocation(program, "starRot");
@@ -195,7 +196,7 @@ class ProceduralSkyRenderer
 		return Math.round(horizon[0] * 255) << 16 | Math.round(horizon[1] * 255) << 8 | Math.round(horizon[2] * 255);
 	}
 
-	void draw(float[] skyProj, int fog, int quadVao, GpuSkyboxConfig config, SkyClock clock)
+	void draw(float[] skyProj, int fog, int quadVao, GpuSkyboxConfig config, SkyClock clock, float flash)
 	{
 		float seconds = clock.elapsedSeconds();
 
@@ -228,6 +229,7 @@ class ProceduralSkyRenderer
 		glUniform1f(uniHorizonOffset, (float) Math.sin(Math.toRadians(config.skyboxHorizonOffset())));
 		glUniform1f(uniFogTint, config.skyboxFogTint() / 100f);
 		glUniform1f(uniBrightness, config.skyboxBrightness() / 100f);
+		glUniform1f(uniFlash, flash);
 		boolean starMap = stars != null && config.starMap();
 		glUniform1f(uniStarMapEnabled, starMap ? 1f : 0f);
 		if (starMap)

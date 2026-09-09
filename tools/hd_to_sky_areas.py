@@ -180,6 +180,8 @@ def main():
         if not sky and not fog:
             continue
         e = entry(areas, name, sky, fog)
+        if e and env.get("lightningEffects"):
+            e["lightning"] = True
         if e:
             out.append(e)
     for name, sky, boxes in EXTRA:

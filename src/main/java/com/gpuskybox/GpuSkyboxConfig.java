@@ -557,6 +557,18 @@ public interface GpuSkyboxConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "lightningEnabled",
+		name = "Lightning",
+		description = "Random lightning flashes where 117 HD marks storms: Wilderness (high), Barrows, Darkmeyer, Draynor Manor, Tempoross.",
+		position = 7,
+		section = skySection
+	)
+	default boolean lightningEnabled()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "sunDisk",
 		name = "Sun disk",
 		description = "Procedural sky: draw the sun itself, not just its glow.",

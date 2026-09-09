@@ -38,6 +38,7 @@ class SkyboxRenderer
 	private int uniHorizonOffset;
 	private int uniFogTint;
 	private int uniBrightness;
+	private int uniFlash;
 	private int uniRotation;
 
 	private final long startNanos = System.nanoTime();
@@ -54,6 +55,7 @@ class SkyboxRenderer
 		uniHorizonOffset = glGetUniformLocation(program, "horizonOffset");
 		uniFogTint = glGetUniformLocation(program, "fogTint");
 		uniBrightness = glGetUniformLocation(program, "brightness");
+		uniFlash = glGetUniformLocation(program, "flash");
 		uniRotation = glGetUniformLocation(program, "rotation");
 	}
 
@@ -161,7 +163,7 @@ class SkyboxRenderer
 	 * @param skyProj  projection * pitch * yaw, without camera translation
 	 * @param quadVao  a VAO whose attribute 0 is a fullscreen quad in clip space (-1..1), drawn as a 4-vertex fan
 	 */
-	void draw(float[] skyProj, int sky, int quadVao, GpuSkyboxConfig config)
+	void draw(float[] skyProj, int sky, int quadVao, GpuSkyboxConfig config, float flash)
 	{
 		double elapsedMinutes = (System.nanoTime() - startNanos) / 60e9;
 		float rotationDeg = (float) ((config.skyboxRotation() + elapsedMinutes * config.skyboxRotationSpeed()) % 360.0);
@@ -185,6 +187,7 @@ class SkyboxRenderer
 		glUniform1f(uniHorizonOffset, (float) Math.sin(Math.toRadians(config.skyboxHorizonOffset())));
 		glUniform1f(uniFogTint, config.skyboxFogTint() / 100f);
 		glUniform1f(uniBrightness, config.skyboxBrightness() / 100f);
+		glUniform1f(uniFlash, flash);
 		glUniform1f(uniRotation, (float) Math.toRadians(rotationDeg));
 
 		glBindVertexArray(quadVao);
