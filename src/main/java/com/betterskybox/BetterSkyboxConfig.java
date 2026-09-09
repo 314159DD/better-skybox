@@ -329,8 +329,9 @@ public interface BetterSkyboxConfig extends Config
 		TOON_VIOLET("oga_cloudy_violet"),
 		DAWN("qwantani_dawn_puresky"),
 		DEBUG("debug"),
-		CUSTOM(null);
+		CUSTOM("");
 
+		/** Folder under {@code skybox/} in the jar; empty for CUSTOM, whose folder is the Custom cubemap folder setting. */
 		final String dir;
 
 		SkyboxTexture(String dir)

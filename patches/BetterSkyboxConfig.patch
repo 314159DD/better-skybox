@@ -171,7 +171,7 @@
  	)
  	default boolean removeVertexSnapping()
  	{
-@@ -236,11 +253,605 @@
+@@ -236,11 +253,606 @@
  		keyName = "numThreads",
  		name = "Threads",
  		description = "Number of render threads to use.",
@@ -252,8 +252,9 @@
 +		TOON_VIOLET("oga_cloudy_violet"),
 +		DAWN("qwantani_dawn_puresky"),
 +		DEBUG("debug"),
-+		CUSTOM(null);
++		CUSTOM("");
 +
++		/** Folder under {@code skybox/} in the jar; empty for CUSTOM, whose folder is the Custom cubemap folder setting. */
 +		final String dir;
 +
 +		SkyboxTexture(String dir)

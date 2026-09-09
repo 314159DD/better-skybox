@@ -61,7 +61,10 @@ class ProceduralSkyRenderer
 	static class Keyframe
 	{
 		float altitude;
+		/** #RRGGBB as written in the file. */
 		String color;
+		/** {@link #color} parsed once at load, so evaluate() neither parses nor allocates. */
+		transient float[] rgb;
 	}
 
 	static class Gradient
@@ -133,15 +136,25 @@ class ProceduralSkyRenderer
 	}
 
 	/**
+	 * The bundled gradient with every keyframe colour parsed.
+	 *
 	 * @throws IOException when the bundled gradient cannot be read or parsed
 	 */
 	static Gradient loadGradient(Gson gson) throws IOException
 	{
 		try (InputStream in = ProceduralSkyRenderer.class.getResourceAsStream("sky_gradient.json"))
 		{
-			return gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Gradient.class);
+			Gradient gradient = gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Gradient.class);
+			for (Keyframe[] keys : new Keyframe[][]{gradient.zenith, gradient.horizon, gradient.sunGlow})
+			{
+				for (Keyframe key : keys)
+				{
+					key.rgb = rgb(key.color);
+				}
+			}
+			return gradient;
 		}
-		catch (JsonParseException ex)
+		catch (JsonParseException | NumberFormatException ex)
 		{
 			throw new IOException("sky_gradient.json invalid", ex);
 		}
@@ -343,7 +356,7 @@ class ProceduralSkyRenderer
 	{
 		if (altitude <= keys[0].altitude)
 		{
-			System.arraycopy(rgb(keys[0].color), 0, out, 0, 3);
+			System.arraycopy(keys[0].rgb, 0, out, 0, 3);
 			return;
 		}
 		for (int i = 1; i < keys.length; i++)
@@ -351,8 +364,8 @@ class ProceduralSkyRenderer
 			if (altitude <= keys[i].altitude)
 			{
 				float t = (altitude - keys[i - 1].altitude) / (keys[i].altitude - keys[i - 1].altitude);
-				float[] a = rgb(keys[i - 1].color);
-				float[] b = rgb(keys[i].color);
+				float[] a = keys[i - 1].rgb;
+				float[] b = keys[i].rgb;
 				for (int c = 0; c < 3; c++)
 				{
 					out[c] = a[c] + (b[c] - a[c]) * t;
@@ -360,7 +373,7 @@ class ProceduralSkyRenderer
 				return;
 			}
 		}
-		System.arraycopy(rgb(keys[keys.length - 1].color), 0, out, 0, 3);
+		System.arraycopy(keys[keys.length - 1].rgb, 0, out, 0, 3);
 	}
 
 	private static float[] rgb(String hex)

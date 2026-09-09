@@ -244,7 +244,12 @@ class SkyPass
 	private void updateArea()
 	{
 		WorldPoint world = config.skyboxByArea() ? playerWorldPoint() : null;
-		SkyAreas.Area area = world == null ? null : skyAreas.find(world);
+		SkyAreas.Area area = null;
+		if (world != null)
+		{
+			// the table is scanned when the tile changes, not every frame
+			area = world.equals(lastWorld) ? currentArea : skyAreas.find(world);
+		}
 		if (area != currentArea)
 		{
 			boolean jumped = lastWorld == null || world == null
