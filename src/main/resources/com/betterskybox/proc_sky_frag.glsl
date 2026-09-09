@@ -24,7 +24,7 @@ uniform float cloudTime;     // seconds * speed
 uniform float time;
 uniform vec4 fogColor;
 uniform float horizonBlend;
-uniform float horizonOffset; // sine of the angle the sky horizon is pushed below the geometric one
+uniform float horizonOffset; // sine of the angle the sky horizon, sun and moon are pushed below the geometric one
 uniform float fogTint;
 uniform float brightness;
 uniform float flash;         // lightning, 0..1: lifts the whole sky towards white
@@ -37,7 +37,6 @@ in vec3 fDir;
 out vec4 FragColor;
 
 #define TAU 6.28318530718
-#define HORIZON_OFFSET 0.087
 
 // ---------------- hashing / noise ----------------
 uvec3 pcg3d(uvec3 v) {
@@ -274,7 +273,7 @@ void main() {
   vec3 viewDir = normalize(fDir);       // world space, y down
   float up = -viewDir.y + horizonOffset;
 
-  vec3 sun = normalize(vec3(sunDir.x, -sunDir.y + HORIZON_OFFSET, sunDir.z));
+  vec3 sun = normalize(vec3(sunDir.x, -sunDir.y + horizonOffset, sunDir.z));
 
   // ---- gradient ----
   vec2 viewHoriz = vec2(viewDir.x, viewDir.z);
@@ -321,7 +320,7 @@ void main() {
 
   // ---- moon ----
   if (moonVisibility > 0.001) {
-    vec3 moon = normalize(vec3(moonDir.x, -moonDir.y + HORIZON_OFFSET, moonDir.z));
+    vec3 moon = normalize(vec3(moonDir.x, -moonDir.y + horizonOffset, moonDir.z));
     float moonDot = dot(viewDir, moon);
     float luma = dot(skyPreStars, vec3(0.299, 0.587, 0.114));
     float dayVis = 1.0 / (1.0 + luma * 12.0);
@@ -405,7 +404,7 @@ void main() {
 
   sky *= brightness;
   sky = mix(sky, fogColor.rgb, fogTint);
-  float t = horizonBlend <= 0.0 ? 1.0 : smoothstep(0.0, horizonBlend, up);
+  float t = smoothstep(0.0, max(horizonBlend, 0.001), up);
   sky = mix(fogColor.rgb, sky, t);
 
   sky = mix(sky, vec3(1.0), flash * 0.7);
