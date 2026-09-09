@@ -395,20 +395,32 @@ public interface BetterSkyboxConfig extends Config
 	@ConfigItem(
 		keyName = "skyMode",
 		name = "Sky type",
-		description = "CUBEMAP: a texture. PROCEDURAL: gradient sky with sun, moon and stars (from 117 HD's day/night work).",
+		description = "PROCEDURAL: gradient sky with sun, moon and stars (from 117 HD's day/night work), in the jar. CUBEMAP: a photographed sky from the sky pack, which the Cubemap section downloads.",
 		position = 2,
 		section = skySection
 	)
 	default SkyMode skyMode()
 	{
-		return SkyMode.CUBEMAP;
+		return SkyMode.PROCEDURAL;
+	}
+
+	@ConfigItem(
+		keyName = "skyPack",
+		name = "Download sky pack",
+		description = "Download the sky pack (about 35 MB, once): 21 full-quality cubemap skies and the NASA star map into ~/.runelite/better-skybox/pack. Needed for Cubemap sky type and for the real star map in the procedural sky.",
+		position = 1,
+		section = cubemapSection
+	)
+	default boolean skyPack()
+	{
+		return false;
 	}
 
 	@ConfigItem(
 		keyName = "skyboxCubemap",
 		name = "Cubemap",
 		description = "Bundled CC0 cubemap (Poly Haven, ambientCG, OpenGameArt), or CUSTOM to use the folder named below. With Sky by area on, this is the sky for unmapped areas.",
-		position = 1,
+		position = 2,
 		section = cubemapSection
 	)
 	default SkyboxTexture skyboxTexture()
@@ -420,7 +432,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxCustomName",
 		name = "Custom cubemap folder",
 		description = "Folder name under ~/.runelite/better-skybox/ containing px, nx, py, ny, pz, nz .png, or a single skybox.png atlas (4x2 faces: px nz nx pz / py ny).",
-		position = 2,
+		position = 3,
 		section = cubemapSection
 	)
 	default String skyboxCustomName()
@@ -432,7 +444,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxByTime",
 		name = "Sky by time",
 		description = "Follow the Time of day: dawn, day, dusk and night cubemaps. Day is the Cubemap above (or the area's sky); the other three are set below unless an area brings its own.",
-		position = 3,
+		position = 4,
 		section = cubemapSection
 	)
 	default boolean skyboxByTime()
@@ -444,7 +456,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxDawn",
 		name = "Dawn cubemap",
 		description = "Sky by time: shown from 5:00 to 7:00 sky time.",
-		position = 4,
+		position = 5,
 		section = cubemapSection
 	)
 	default SkyboxTexture skyboxDawn()
@@ -456,7 +468,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxDusk",
 		name = "Dusk cubemap",
 		description = "Sky by time: shown from 17:00 to 20:00 sky time.",
-		position = 5,
+		position = 6,
 		section = cubemapSection
 	)
 	default SkyboxTexture skyboxDusk()
@@ -468,7 +480,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxNight",
 		name = "Night cubemap",
 		description = "Sky by time: shown from 20:00 to 5:00 sky time.",
-		position = 6,
+		position = 7,
 		section = cubemapSection
 	)
 	default SkyboxTexture skyboxNight()
@@ -480,7 +492,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "nightStars",
 		name = "Star map on night skies",
 		description = "Draw the NASA star map over the bundled night cubemaps (NIGHT, MOONRISE, AURORA_NIGHT) and over every area night sky. Brightness follows Star brightness in the Procedural section.",
-		position = 7,
+		position = 8,
 		section = cubemapSection
 	)
 	default boolean nightStars()
@@ -493,7 +505,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "nightStarsDim",
 		name = "Night sky dimming",
 		description = "How much the photo sky above the horizon is darkened when the star map is on, so its own blurry stars fade out.",
-		position = 8,
+		position = 9,
 		section = cubemapSection
 	)
 	default int nightStarsDim()
@@ -830,7 +842,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxRotation",
 		name = "Rotation",
 		description = "Cubemap: rotate the texture around the vertical axis, in degrees.",
-		position = 12,
+		position = 13,
 		section = cubemapSection
 	)
 	default int skyboxRotation()
@@ -843,7 +855,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxRotationSpeed",
 		name = "Drift speed",
 		description = "Cubemap: slowly rotate the texture over time, in degrees per minute. 0 disables drift.",
-		position = 13,
+		position = 14,
 		section = cubemapSection
 	)
 	default int skyboxRotationSpeed()
@@ -855,7 +867,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxByArea",
 		name = "Sky by area",
 		description = "Pick the sky and fog colour from the area you are in (Wilderness, Morytania, desert, ...). Areas come from 117 HD's tables via sky_areas.json, override with ~/.runelite/better-skybox/sky_areas.json. Unmapped areas use the Cubemap above.",
-		position = 9,
+		position = 10,
 		section = cubemapSection
 	)
 	default boolean skyboxByArea()
@@ -868,7 +880,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxFadeSeconds",
 		name = "Time fade",
 		description = "Seconds to crossfade when the sky changes with the time of day or the config. 0 = instant.",
-		position = 10,
+		position = 11,
 		section = cubemapSection
 	)
 	default int skyboxFadeSeconds()
@@ -881,7 +893,7 @@ public interface BetterSkyboxConfig extends Config
 		keyName = "skyboxFadeTiles",
 		name = "Area fade",
 		description = "Tiles to walk past an area border before the new sky is fully in. Walking back swaps the skies and carries the blend over. 0 = instant.",
-		position = 11,
+		position = 12,
 		section = cubemapSection
 	)
 	default int skyboxFadeTiles()

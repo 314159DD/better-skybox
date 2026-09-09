@@ -91,6 +91,9 @@ class SkyPass
 	@Inject
 	private StarMap starMap;
 
+	@Inject
+	private SkyPack skyPack;
+
 	private final SkyAreas skyAreas = new SkyAreas();
 	/**
 	 * Built in {@link #init}, not on injection: the sky day of the CYCLE preset starts when the plugin is
@@ -112,10 +115,14 @@ class SkyPass
 	private SkyClock.Phase lastPhase;
 	/** The custom folder name last reported in chat as unloadable, so the report goes out once per name. */
 	private String reportedCustomName;
+	/** Whether the missing sky pack has been mentioned this session, once for the skies and once for the stars. */
+	private boolean reportedPackForCubemaps;
+	private boolean reportedPackForStars;
 
 	void init(Template template)
 	{
 		skyClock = new SkyClock();
+		skyPack.refresh();
 		// after the plugin's own sync mode and thread setup, so the ConfigChanged events land on a live context
 		GpuSettingsImport.run(configManager);
 		loads.start();
@@ -165,6 +172,7 @@ class SkyPass
 		if (config.skyboxEnabled())
 		{
 			updateArea();
+			hintMissingPack();
 			if (procedural())
 			{
 				borderBlend.release();
@@ -263,6 +271,36 @@ class SkyPass
 			// the cubemap itself is selected per frame in beginFrame; just allow a fixed folder another try
 			clientThread.invokeLater(this::retryFailed);
 		}
+		else if (configChanged.getKey().equals("skyPack"))
+		{
+			// the retry is what puts the pack's skies on screen: they are in the failed set from before it landed
+			skyPack.onToggled(config.skyPack(), this::retryFailed);
+		}
+	}
+
+	/**
+	 * One line in chat per session about what the sky pack would add: the cubemap skies the player picked and
+	 * cannot have, or the real star map behind the generated one. Silent once the pack is installed.
+	 */
+	private void hintMissingPack()
+	{
+		if (skyPack.installed())
+		{
+			return;
+		}
+		boolean cubemapWanted = config.skyMode() == BetterSkyboxConfig.SkyMode.CUBEMAP;
+		if (cubemapWanted && !reportedPackForCubemaps)
+		{
+			reportedPackForCubemaps = true;
+			chat("the sky pack is not installed. Turn on 'Download sky pack' in the Cubemap section to use "
+				+ "cubemap skies.");
+		}
+		else if (!cubemapWanted && config.starMap() && !reportedPackForStars)
+		{
+			reportedPackForStars = true;
+			chat("the real star map is in the sky pack. Turn on 'Download sky pack' in the Cubemap section; "
+				+ "generated stars are drawn until then.");
+		}
 	}
 
 	/** Client thread: every folder that could not be read gets another attempt, the skies' and the stars'. */
@@ -272,9 +310,13 @@ class SkyPass
 		starMap.retryFailed();
 	}
 
+	/**
+	 * Whether the procedural sky draws this frame. It also stands in for the cubemap sky while the sky pack is
+	 * missing: the cubemaps are all in the pack, the procedural sky needs nothing but the jar.
+	 */
 	private boolean procedural()
 	{
-		return config.skyMode() == BetterSkyboxConfig.SkyMode.PROCEDURAL;
+		return config.skyMode() == BetterSkyboxConfig.SkyMode.PROCEDURAL || !skyPack.installed();
 	}
 
 	private void updateArea()
@@ -359,11 +401,16 @@ class SkyPass
 		{
 			reportedCustomName = name;
 			String reason = name.isEmpty() ? "no custom sky folder set" : "custom sky folder " + name + " not found";
-			chatMessageManager.queue(QueuedMessage.builder()
-				.type(ChatMessageType.CONSOLE)
-				.value("Better Skybox: " + reason + ", using " + fallback)
-				.build());
+			chat(reason + ", using " + fallback);
 		}
+	}
+
+	private void chat(String text)
+	{
+		chatMessageManager.queue(QueuedMessage.builder()
+			.type(ChatMessageType.CONSOLE)
+			.value("Better Skybox: " + text)
+			.build());
 	}
 
 	/**
