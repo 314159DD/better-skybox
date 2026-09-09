@@ -329,6 +329,7 @@ public interface GpuSkyboxConfig extends Config
 		TOON_BLUE("oga_cloudy_blue"),
 		TOON_SUNSET("oga_cloudy_sunset"),
 		TOON_VIOLET("oga_cloudy_violet"),
+		DAWN("qwantani_dawn_puresky"),
 		DEBUG("debug"),
 		CUSTOM(null);
 
@@ -418,6 +419,54 @@ public interface GpuSkyboxConfig extends Config
 	default String skyboxCustomName()
 	{
 		return "";
+	}
+
+	@ConfigItem(
+		keyName = "skyboxByTime",
+		name = "Sky by time",
+		description = "Follow the Time of day: dawn, day, dusk and night cubemaps. Day is the Cubemap above (or the area's sky); the other three are set below unless an area brings its own.",
+		position = 3,
+		section = cubemapSection
+	)
+	default boolean skyboxByTime()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "skyboxDawn",
+		name = "Dawn cubemap",
+		description = "Sky by time: shown from 5:00 to 7:00 sky time.",
+		position = 4,
+		section = cubemapSection
+	)
+	default SkyboxTexture skyboxDawn()
+	{
+		return SkyboxTexture.DAWN;
+	}
+
+	@ConfigItem(
+		keyName = "skyboxDusk",
+		name = "Dusk cubemap",
+		description = "Sky by time: shown from 17:00 to 20:00 sky time.",
+		position = 5,
+		section = cubemapSection
+	)
+	default SkyboxTexture skyboxDusk()
+	{
+		return SkyboxTexture.SUNSET;
+	}
+
+	@ConfigItem(
+		keyName = "skyboxNight",
+		name = "Night cubemap",
+		description = "Sky by time: shown from 20:00 to 5:00 sky time.",
+		position = 6,
+		section = cubemapSection
+	)
+	default SkyboxTexture skyboxNight()
+	{
+		return SkyboxTexture.NIGHT;
 	}
 
 	@ConfigItem(
@@ -725,7 +774,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxRotation",
 		name = "Rotation",
 		description = "Cubemap: rotate the texture around the vertical axis, in degrees.",
-		position = 5,
+		position = 9,
 		section = cubemapSection
 	)
 	default int skyboxRotation()
@@ -738,7 +787,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxRotationSpeed",
 		name = "Drift speed",
 		description = "Cubemap: slowly rotate the texture over time, in degrees per minute. 0 disables drift.",
-		position = 6,
+		position = 10,
 		section = cubemapSection
 	)
 	default int skyboxRotationSpeed()
@@ -750,7 +799,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxByArea",
 		name = "Sky by area",
 		description = "Pick the sky and fog colour from the area you are in (Wilderness, Morytania, desert, ...). Areas come from 117 HD's tables via sky_areas.json, override with ~/.runelite/gpu-skybox/sky_areas.json. Unmapped areas use the Cubemap above.",
-		position = 3,
+		position = 7,
 		section = cubemapSection
 	)
 	default boolean skyboxByArea()
@@ -761,9 +810,9 @@ public interface GpuSkyboxConfig extends Config
 	@Range(min = 0, max = 30)
 	@ConfigItem(
 		keyName = "skyboxFadeSeconds",
-		name = "Area fade",
-		description = "Cubemap: seconds to crossfade when the sky changes with the area. 0 = instant.",
-		position = 4,
+		name = "Time fade",
+		description = "Seconds to crossfade when the sky changes with the time of day or the config. 0 = instant.",
+		position = 8,
 		section = cubemapSection
 	)
 	default int skyboxFadeSeconds()

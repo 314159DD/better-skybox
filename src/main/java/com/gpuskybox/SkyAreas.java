@@ -26,6 +26,10 @@ class SkyAreas
 		String name;
 		/** Cubemap folder, or null to keep the configured one. */
 		String sky;
+		/** Per-phase cubemaps; null means "use sky" (and the global dawn/dusk/night defaults when sky is null too). */
+		String skyDawn;
+		String skyDusk;
+		String skyNight;
 		/** Fog colour as #RRGGBB, or null. */
 		String fog;
 		/** [x1, y1, x2, y2, plane1, plane2] in world tiles, inclusive. */
@@ -72,6 +76,21 @@ class SkyAreas
 				}
 			}
 			return false;
+		}
+
+		String skyFor(SkyClock.Phase phase)
+		{
+			switch (phase)
+			{
+				case DAWN:
+					return skyDawn != null ? skyDawn : sky;
+				case DUSK:
+					return skyDusk != null ? skyDusk : sky;
+				case NIGHT:
+					return skyNight != null ? skyNight : sky;
+				default:
+					return sky;
+			}
 		}
 	}
 

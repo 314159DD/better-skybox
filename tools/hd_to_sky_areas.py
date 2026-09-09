@@ -74,6 +74,25 @@ EXTRA = [
     ("Kandarin", PALE_MORNING, [[2432, 3072, 2815, 3583]]),
 ]
 
+NIGHT_SKY = "qwantani_night_puresky"
+AURORA = "ambientcg_nightskyhdri007"
+# per-area night overrides: (area name) -> cubemap. Areas not listed keep their day sky at night.
+NIGHT_THEMES = {
+    "Misthalin": NIGHT_SKY, "Asgarnia": NIGHT_SKY, "Kandarin": NIGHT_SKY, "Al Kharid": NIGHT_SKY,
+    "KHARIDIAN_DESERT": NIGHT_SKY, "KHARIDIAN_DESERT_MID": NIGHT_SKY, "KHARIDIAN_DESERT_DEEP": NIGHT_SKY,
+    "KARAMJA": NIGHT_SKY, "Feldip Hills": NIGHT_SKY, "KOUREND": NIGHT_SKY, "VARLAMORE": NIGHT_SKY,
+    "FREMENNIK_PROVINCE": AURORA, "GIELINOR_SNOWY_NORTHERN_REGION": AURORA, "ZEAH_SNOWY_NORTHERN_REGION": AURORA,
+    "FREMENNIK_ISLES_NORTH": AURORA, "FREMENNIK_ISLES_FAR_NORTH": AURORA, "Miscellania": AURORA,
+}
+DUSK_THEMES = {
+    "Misthalin": "qwantani_sunset_puresky", "Asgarnia": "qwantani_sunset_puresky", "Kandarin": "qwantani_dusk_1_puresky",
+    "KHARIDIAN_DESERT": "industrial_sunset_puresky", "KHARIDIAN_DESERT_MID": "industrial_sunset_puresky",
+    "KHARIDIAN_DESERT_DEEP": "industrial_sunset_puresky", "Al Kharid": "industrial_sunset_puresky",
+}
+DAWN_THEMES = {
+    "Misthalin": "qwantani_dawn_puresky", "Asgarnia": "qwantani_dawn_puresky", "Kandarin": "ambientcg_morningskyhdri013b",
+}
+
 
 def load(name):
     s = open(os.path.join(HD, name), encoding="utf-8").read()
@@ -123,21 +142,27 @@ def flatten(areas, name, seen=None):
     return aabbs, regions, boxes
 
 
-def entry(areas, name, sky, fog):
-    aabbs, regions, boxes = flatten(areas, name)
-    if not (aabbs or regions or boxes):
+def entry(areas, name, sky, fog, boxes=None):
+    if boxes is None:
+        aabbs, regions, rboxes = flatten(areas, name)
+    else:
+        aabbs, regions, rboxes = [norm_aabb(b) for b in boxes], [], []
+    if not (aabbs or regions or rboxes):
         return None
     e = {"name": name}
     if sky:
         e["sky"] = sky
+    for key, table in (("skyDawn", DAWN_THEMES), ("skyDusk", DUSK_THEMES), ("skyNight", NIGHT_THEMES)):
+        if name in table:
+            e[key] = table[name]
     if fog:
         e["fog"] = fog
     if aabbs:
         e["aabbs"] = aabbs
     if regions:
         e["regions"] = regions
-    if boxes:
-        e["regionBoxes"] = boxes
+    if rboxes:
+        e["regionBoxes"] = rboxes
     return e
 
 
@@ -158,7 +183,7 @@ def main():
         if e:
             out.append(e)
     for name, sky, boxes in EXTRA:
-        e = entry(areas, name, sky, None) if boxes is None else {"name": name, "sky": sky, "aabbs": [norm_aabb(b) for b in boxes]}
+        e = entry(areas, name, sky, None, boxes)
         if e:
             out.append(e)
     unknown = [n for n in THEMES if n not in areas]

@@ -1097,18 +1097,41 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		}
 	}
 
-	/** Cubemap the current area (or the config) asks for; the manual choice is the fallback for unmapped areas. */
+	/**
+	 * Cubemap for this frame: the area's sky for the current phase, else the global phase default, else the
+	 * manual Cubemap. A failed load falls through to the next candidate.
+	 */
 	private void selectCubemap()
 	{
 		float fade = config.skyboxFadeSeconds();
-		if (currentArea != null && currentArea.sky != null && skyboxRenderer.select(currentArea.sky, fade))
+		SkyClock.Phase phase = config.skyboxByTime() ? SkyClock.phase(skyClock.hour(config)) : SkyClock.Phase.DAY;
+		if (currentArea != null)
 		{
-			return;
+			String areaSky = currentArea.skyFor(phase);
+			if (areaSky != null && skyboxRenderer.select(areaSky, fade))
+			{
+				return;
+			}
 		}
-		String manual = config.skyboxTexture() == GpuSkyboxConfig.SkyboxTexture.CUSTOM
+		GpuSkyboxConfig.SkyboxTexture texture;
+		switch (phase)
+		{
+			case DAWN:
+				texture = config.skyboxDawn();
+				break;
+			case DUSK:
+				texture = config.skyboxDusk();
+				break;
+			case NIGHT:
+				texture = config.skyboxNight();
+				break;
+			default:
+				texture = config.skyboxTexture();
+		}
+		String name = texture == GpuSkyboxConfig.SkyboxTexture.CUSTOM
 			? config.skyboxCustomName().trim()
-			: config.skyboxTexture().dir;
-		skyboxRenderer.select(manual, fade);
+			: texture.dir;
+		skyboxRenderer.select(name, fade);
 	}
 
 	private boolean shouldDrawCubemap(Scene scene)

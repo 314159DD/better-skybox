@@ -35,8 +35,10 @@ matching section below it.
 | Enable sky | on | sky pass instead of the flat fog colour |
 | Sky type | CUBEMAP | CUBEMAP = texture, PROCEDURAL = gradient sky with sun, moon, stars |
 | Cubemap | RS3_GREENLANDS | RS3 rips, twelve Poly Haven skies (PARTLY_CLOUDY .. NIGHT), five ambientCG skies (STORM_BREAK, DEEP_BLUE, PALE_MORNING, GOLDEN_HOUR, AURORA_NIGHT), three stylised OpenGameArt skies (TOON_BLUE, TOON_SUNSET, TOON_VIOLET), DEBUG, or CUSTOM. With Sky by area on, this is the fallback for unmapped areas |
+| Sky by time | on | cubemap: dawn/day/dusk/night follow the Time of day; areas may bring their own night or dusk sky |
+| Dawn / Dusk / Night cubemap | DAWN / SUNSET / NIGHT | cubemap: phase defaults for areas without their own |
 | Custom cubemap folder | | folder under `~/.runelite/gpu-skybox/<name>/`: six `px nx py ny pz nz .png`, or one `skybox.png` 4x2 atlas (px nz nx pz / py ny) |
-| Time of day | DAY | procedural: DAY, SUNRISE, DAWN, SUNSET, DUSK, NIGHT, BLOOD_MOON, CLOCK (local time), CYCLE (full day in `Cycle length` minutes), CUSTOM (sliders) |
+| Time of day (Sky section) | DAY | procedural: DAY, SUNRISE, DAWN, SUNSET, DUSK, NIGHT, BLOOD_MOON, CLOCK (local time), CYCLE (full day in `Cycle length` minutes), CUSTOM (sliders) |
 | Sun altitude / azimuth | 30 / 235 | procedural, Time of day = CUSTOM |
 | Moon, Stars | on | procedural |
 | Real star map | on | procedural: NASA Deep Star Map (Gaia DR2) turning with the time of day, instead of generated stars |
