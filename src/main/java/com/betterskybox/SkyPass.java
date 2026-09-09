@@ -25,6 +25,7 @@
 package com.betterskybox;
 
 import com.google.gson.Gson;
+import java.io.IOException;
 import java.util.Random;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -81,11 +82,11 @@ class SkyPass
 
 	void init(Template template)
 	{
-		// a sky shader that fails on this driver must not take the whole renderer down
+		skyAreas.load(gson);
+		// a sky shader that fails on this driver must not take the whole renderer down, nor the other sky
 		try
 		{
 			skyboxRenderer.initProgram(template);
-			skyAreas.load(gson);
 		}
 		catch (ShaderException ex)
 		{
@@ -98,6 +99,10 @@ class SkyPass
 		catch (ShaderException ex)
 		{
 			log.error("Procedural sky shader failed to compile, procedural sky disabled", ex);
+		}
+		catch (IOException ex)
+		{
+			log.warn("sky_gradient.json invalid, procedural sky disabled", ex);
 		}
 	}
 

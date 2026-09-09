@@ -25,6 +25,8 @@
 package com.betterskybox;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -86,15 +88,18 @@ class ProceduralSkyRenderer
 	private float moonSize = 1f;
 	private float moonPhase = 1f;
 
-	void initProgram(Template template, Gson gson) throws ShaderException
+	/**
+	 * @throws IOException when the bundled gradient cannot be read or parsed; the program is then never compiled
+	 */
+	void initProgram(Template template, Gson gson) throws ShaderException, IOException
 	{
 		try (InputStream in = ProceduralSkyRenderer.class.getResourceAsStream("sky_gradient.json"))
 		{
 			gradient = gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Gradient.class);
 		}
-		catch (Exception ex)
+		catch (JsonParseException ex)
 		{
-			throw new RuntimeException("sky_gradient.json missing or invalid", ex);
+			throw new IOException("sky_gradient.json invalid", ex);
 		}
 
 		program = PROGRAM.compile(template);
