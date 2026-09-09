@@ -51,7 +51,7 @@ class ProceduralSkyRenderer
 	private int uniSkyProj, uniZenith, uniHorizon, uniSun, uniSunDir, uniMoonDir, uniMoonColor, uniMoonVisibility,
 		uniMoonSize, uniMoonPhase, uniStarVisibility, uniStarBrightness, uniShootingStars, uniNebula, uniAurora,
 		uniSunDisk, uniCloudCover, uniCloudTime, uniTime, uniFogColor, uniHorizonBlend, uniFogTint, uniBrightness,
-		uniStarMap, uniStarMapEnabled, uniStarRot;
+		uniStarMap, uniStarMapEnabled, uniStarRot, uniHorizonOffset;
 
 	private final long startNanos = System.nanoTime();
 
@@ -98,6 +98,7 @@ class ProceduralSkyRenderer
 		uniTime = glGetUniformLocation(program, "time");
 		uniFogColor = glGetUniformLocation(program, "fogColor");
 		uniHorizonBlend = glGetUniformLocation(program, "horizonBlend");
+		uniHorizonOffset = glGetUniformLocation(program, "horizonOffset");
 		uniFogTint = glGetUniformLocation(program, "fogTint");
 		uniBrightness = glGetUniformLocation(program, "brightness");
 		uniStarMap = glGetUniformLocation(program, "starMap");
@@ -260,6 +261,7 @@ class ProceduralSkyRenderer
 		glUniform1f(uniTime, seconds);
 		glUniform4f(uniFogColor, (fog >> 16 & 0xFF) / 255f, (fog >> 8 & 0xFF) / 255f, (fog & 0xFF) / 255f, 1f);
 		glUniform1f(uniHorizonBlend, config.skyboxHorizonBlend() / 100f);
+		glUniform1f(uniHorizonOffset, (float) Math.sin(Math.toRadians(config.skyboxHorizonOffset())));
 		glUniform1f(uniFogTint, config.skyboxFogTint() / 100f);
 		glUniform1f(uniBrightness, config.skyboxBrightness() / 100f);
 		boolean starMap = stars != null && config.starMap();

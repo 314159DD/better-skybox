@@ -5,6 +5,7 @@ uniform samplerCube prevCubemap; // cubemap shown before the last area change
 uniform float blend;            // 0 = prevCubemap, 1 = cubemap
 uniform vec4 fogColor;
 uniform float horizonBlend;  // width of the fog -> sky fade above the horizon, in units of the up component
+uniform float horizonOffset; // sine of the angle the sky horizon is pushed below the geometric one, so it starts behind the terrain edge
 uniform float fogTint;       // 0..1, share of fog colour mixed into the whole sky
 uniform float brightness;    // multiplier
 uniform float rotation;      // radians around the vertical axis
@@ -16,7 +17,7 @@ out vec4 FragColor;
 void main() {
   vec3 d = normalize(fDir);
   // world space has +y pointing down; cubemaps expect +y up
-  float up = -d.y;
+  float up = -d.y + horizonOffset;
 
   float c = cos(rotation);
   float s = sin(rotation);

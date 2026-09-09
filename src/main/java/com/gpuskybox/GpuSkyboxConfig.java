@@ -681,12 +681,25 @@ public interface GpuSkyboxConfig extends Config
 		return 5;
 	}
 
+	@Range(min = 0, max = 45)
+	@ConfigItem(
+		keyName = "skyboxHorizonOffset",
+		name = "Horizon offset",
+		description = "Degrees the sky horizon is pushed below the true horizon. Raise it until no flat band shows between the terrain edge and the sky; lower it if the sky looks squashed.",
+		position = 5,
+		section = fogSection
+	)
+	default int skyboxHorizonOffset()
+	{
+		return 10;
+	}
+
 	@Range(min = 0, max = 100)
 	@ConfigItem(
 		keyName = "skyboxFogTint",
 		name = "Fog tint",
 		description = "How much of the fog colour is mixed into the whole sky.",
-		position = 5,
+		position = 6,
 		section = fogSection
 	)
 	default int skyboxFogTint()
@@ -699,7 +712,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxBrightness",
 		name = "Sky brightness",
 		description = "Brightness multiplier for the sky, in percent.",
-		position = 6,
+		position = 7,
 		section = fogSection
 	)
 	default int skyboxBrightness()

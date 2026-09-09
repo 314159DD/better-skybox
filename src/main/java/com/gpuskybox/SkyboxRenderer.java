@@ -35,6 +35,7 @@ class SkyboxRenderer
 	private int uniBlend;
 	private int uniFogColor;
 	private int uniHorizonBlend;
+	private int uniHorizonOffset;
 	private int uniFogTint;
 	private int uniBrightness;
 	private int uniRotation;
@@ -50,6 +51,7 @@ class SkyboxRenderer
 		uniBlend = glGetUniformLocation(program, "blend");
 		uniFogColor = glGetUniformLocation(program, "fogColor");
 		uniHorizonBlend = glGetUniformLocation(program, "horizonBlend");
+		uniHorizonOffset = glGetUniformLocation(program, "horizonOffset");
 		uniFogTint = glGetUniformLocation(program, "fogTint");
 		uniBrightness = glGetUniformLocation(program, "brightness");
 		uniRotation = glGetUniformLocation(program, "rotation");
@@ -180,6 +182,7 @@ class SkyboxRenderer
 		glUniformMatrix4fv(uniSkyProj, false, skyProj);
 		glUniform4f(uniFogColor, (sky >> 16 & 0xFF) / 255f, (sky >> 8 & 0xFF) / 255f, (sky & 0xFF) / 255f, 1f);
 		glUniform1f(uniHorizonBlend, config.skyboxHorizonBlend() / 100f);
+		glUniform1f(uniHorizonOffset, (float) Math.sin(Math.toRadians(config.skyboxHorizonOffset())));
 		glUniform1f(uniFogTint, config.skyboxFogTint() / 100f);
 		glUniform1f(uniBrightness, config.skyboxBrightness() / 100f);
 		glUniform1f(uniRotation, (float) Math.toRadians(rotationDeg));

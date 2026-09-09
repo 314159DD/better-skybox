@@ -24,6 +24,7 @@ uniform float cloudTime;     // seconds * speed
 uniform float time;
 uniform vec4 fogColor;
 uniform float horizonBlend;
+uniform float horizonOffset; // sine of the angle the sky horizon is pushed below the geometric one
 uniform float fogTint;
 uniform float brightness;
 uniform samplerCube starMap;   // NASA Deep Star Map, black where there is no star
@@ -270,7 +271,7 @@ vec3 aurora(vec3 viewDir, float t) {
 
 void main() {
   vec3 viewDir = normalize(fDir);       // world space, y down
-  float up = -viewDir.y;
+  float up = -viewDir.y + horizonOffset;
 
   vec3 sun = normalize(vec3(sunDir.x, -sunDir.y + HORIZON_OFFSET, sunDir.z));
 
