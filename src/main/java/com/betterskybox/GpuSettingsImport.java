@@ -27,6 +27,7 @@ package com.betterskybox;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.config.ConfigManager;
@@ -61,6 +62,12 @@ final class GpuSettingsImport
 		"removeVertexSnapping",
 		"numThreads");
 
+	/** Where a value goes: group, key, value, as {@link ConfigManager#setConfiguration(String, String, String)}. */
+	interface Writer
+	{
+		void write(String group, String key, String value);
+	}
+
 	private GpuSettingsImport()
 	{
 	}
@@ -83,13 +90,23 @@ final class GpuSettingsImport
 	/** Runs the import unless {@link #MARKER} says it already ran. */
 	static void run(ConfigManager configManager)
 	{
-		if (configManager.getConfiguration(BetterSkyboxConfig.GROUP, MARKER) != null)
+		run(configManager::getConfiguration, configManager::setConfiguration);
+	}
+
+	/**
+	 * The seam tests use: {@code read} and {@code write} take the group, so a test sees that group {@code gpu}
+	 * is only ever read. The marker is written whatever was copied, so nothing stored later under {@code gpu}
+	 * can arrive after the user has settings of their own.
+	 */
+	static void run(BiFunction<String, String, String> read, Writer write)
+	{
+		if (read.apply(BetterSkyboxConfig.GROUP, MARKER) != null)
 		{
 			return;
 		}
-		Map<String, String> copy = plan(key -> configManager.getConfiguration(GPU_GROUP, key), KEYS);
-		copy.forEach((key, value) -> configManager.setConfiguration(BetterSkyboxConfig.GROUP, key, value));
-		configManager.setConfiguration(BetterSkyboxConfig.GROUP, MARKER, "true");
+		Map<String, String> copy = plan(key -> read.apply(GPU_GROUP, key), KEYS);
+		copy.forEach((key, value) -> write.write(BetterSkyboxConfig.GROUP, key, value));
+		write.write(BetterSkyboxConfig.GROUP, MARKER, "true");
 		log.info("Imported {} of {} renderer settings from the GPU plugin", copy.size(), KEYS.size());
 	}
 }

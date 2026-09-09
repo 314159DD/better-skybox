@@ -26,6 +26,7 @@ package com.betterskybox;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -59,22 +60,71 @@ public class GpuSettingsImportTest
 		assertTrue(GpuSettingsImport.plan(key -> null, GpuSettingsImport.KEYS).isEmpty());
 	}
 
-	@Test
-	public void everyImportedKeyIsARendererSetting()
+	/** Every {@code @ConfigItem} key of {@link BetterSkyboxConfig} that sits in {@code section}. */
+	private static Set<String> keysInSection(String section)
 	{
-		Set<String> declared = new HashSet<>();
+		Set<String> keys = new HashSet<>();
 		for (Method m : BetterSkyboxConfig.class.getDeclaredMethods())
 		{
 			ConfigItem item = m.getAnnotation(ConfigItem.class);
-			if (item != null)
+			if (item != null && item.section().equals(section))
 			{
-				declared.add(item.keyName());
+				keys.add(item.keyName());
 			}
 		}
-		for (String key : GpuSettingsImport.KEYS)
-		{
-			assertTrue(key, declared.contains(key));
-		}
-		assertEquals(16, GpuSettingsImport.KEYS.size());
+		return keys;
+	}
+
+	@Test
+	public void theImportedKeysAreExactlyTheRendererOnes()
+	{
+		// the patch puts every upstream item in Renderer, fogDepth aside, so an upstream key added at the next
+		// client bump lands in that section and fails here until it is imported too
+		Set<String> expected = new HashSet<>(keysInSection(BetterSkyboxConfig.rendererSection));
+		assertEquals(15, expected.size());
+		expected.add("fogDepth");
+		assertEquals(expected, new HashSet<>(GpuSettingsImport.KEYS));
+		assertEquals(expected.size(), GpuSettingsImport.KEYS.size());
+	}
+
+	@Test
+	public void theOneUpstreamKeyOutsideRendererIsFogDepth()
+	{
+		assertTrue(keysInSection(BetterSkyboxConfig.fogSection).contains("fogDepth"));
+	}
+
+	@Test
+	public void theMarkerStopsASecondImport()
+	{
+		Map<String, String> ours = Map.of(GpuSettingsImport.MARKER, "true");
+		List<String> written = new ArrayList<>();
+		GpuSettingsImport.run((group, key) -> ours.get(key), (group, key, value) -> written.add(key));
+		assertTrue(written.isEmpty());
+	}
+
+	@Test
+	public void theMarkerIsWrittenEvenWhenNothingWasCopied()
+	{
+		// a fresh client with no stock GPU settings stored: the import must still not run a second time
+		Map<String, String> written = new HashMap<>();
+		GpuSettingsImport.run((group, key) -> null, (group, key, value) -> written.put(key, value));
+		assertEquals(Map.of(GpuSettingsImport.MARKER, "true"), written);
+	}
+
+	@Test
+	public void nothingIsEverWrittenToTheGpuGroup()
+	{
+		Map<String, String> gpu = Map.of("drawDistance", "90", "numThreads", "7");
+		List<String> groups = new ArrayList<>();
+		Map<String, String> ours = new HashMap<>();
+		GpuSettingsImport.run(
+			(group, key) -> GpuSettingsImport.GPU_GROUP.equals(group) ? gpu.get(key) : ours.get(key),
+			(group, key, value) ->
+			{
+				groups.add(group);
+				ours.put(key, value);
+			});
+		assertEquals(Set.of(BetterSkyboxConfig.GROUP), new HashSet<>(groups));
+		assertEquals(Map.of("drawDistance", "90", "numThreads", "7", GpuSettingsImport.MARKER, "true"), ours);
 	}
 }
