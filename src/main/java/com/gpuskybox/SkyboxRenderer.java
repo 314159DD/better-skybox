@@ -28,6 +28,7 @@ class SkyboxRenderer
 	private Cubemap previous;
 	private long fadeStartNanos;
 	private float fadeSeconds;
+	private float blendOverride = -1f;
 
 	private int uniSkyProj;
 	private int uniCubemap;
@@ -92,8 +93,15 @@ class SkyboxRenderer
 			current = next;
 			fadeStartNanos = System.nanoTime();
 			this.fadeSeconds = previous == null ? 0 : fadeSeconds;
+			blendOverride = -1f;
 		}
 		return true;
+	}
+
+	/** Drive the crossfade from outside (border blending); pass -1 to go back to the time-based fade. */
+	void overrideBlend(float t)
+	{
+		blendOverride = t;
 	}
 
 	/** Forget the last failed name so a fixed folder gets another attempt. */
@@ -122,6 +130,16 @@ class SkyboxRenderer
 	/** 0 = still showing the previous cubemap, 1 = fade finished. */
 	private float blend()
 	{
+		if (blendOverride >= 0f && previous != null)
+		{
+			if (blendOverride >= 1f)
+			{
+				previous = null;
+				blendOverride = -1f;
+				return 1f;
+			}
+			return blendOverride;
+		}
 		if (previous == null || fadeSeconds <= 0)
 		{
 			return 1f;

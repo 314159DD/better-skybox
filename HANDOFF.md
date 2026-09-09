@@ -25,13 +25,20 @@ RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, pl
    - 8 more CC0 cubemaps (5 ambientCG, 3 OpenGameArt stylised). Jar is 39 MB now.
    - CubemapLoader split out of SkyboxRenderer so both renderers share it.
    NOTHING of the day's work has been seen in-game yet.
-5. NEXT: in-game check, in this order. (a) CUBEMAP mode, walk Lumbridge -> Al Kharid -> Shantay Pass:
-   log `Sky area: KHARIDIAN_DESERT ...`, crossfade, fog turns sand-coloured. (b) PROCEDURAL, Time of day =
-   NIGHT: Milky Way visible, stars sharp, no seam; then CYCLE with Cycle length 1 to see it turn.
-   (c) Morytania in daylight: the dark 117 HD fog (#1e314b) under an overcast sky may look wrong; if so,
-   switch Fog colour to SKYBOX or lighten fogs in hd_to_sky_areas.py.
-6. AFTER: themed AI skies are off the table for now (Blockade Labs declined). Candidates from the research
-   still open: Spacescape (MIT) for procedural night skies, Kenney stylised sets, ambientCG sweep for more.
+5. NEXT: none of sprint/sky-features-2 has been seen in-game yet. In-game checklist, in this order:
+   (a) Time of day = CYCLE, Cycle length 1, in Lumbridge: dawn, day, sunset and night cubemaps all cycle
+   inside one minute. (b) walk into the Wilderness at level 30+: lightning flashes start within 22 s.
+   (c) Sky type = PROCEDURAL, walk into Canifis: dusk regardless of the Time of day setting (area mood).
+   (d) walk back and forth across the Al Kharid gate a few times: no pop, the sky eases across the border
+   both ways.
+6. DONE (2026-09-09, sprint/sky-features-2): five features shipped on top of the shared SkyClock -
+   real moon phase (CLOCK/CYCLE follow the calendar instead of the Moon phase slider), time-of-day
+   cubemaps (dawn/day/dusk/night per area with global phase defaults), lightning flashes in 117 HD storm
+   areas (sky and fog), area moods (areas force a procedural preset over Time of day), and border blending
+   by distance (Area fade is now tiles walked past the border, not seconds; stepping back reverses instead
+   of restarting). Commit REPLACE_WITH_HASH. Themed AI skies are still off the table (Blockade Labs
+   declined); Spacescape (MIT), Kenney stylised sets and an ambientCG sweep remain open candidates for a
+   later round.
 
 ## Gotchas
 - Compile with `./gradlew agentJar --offline -q` (7 s). Restart the client to pick up the jar.

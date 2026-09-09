@@ -147,6 +147,10 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 	private final Lightning lightning = new Lightning(new java.util.Random());
 	private float flash;
 	private SkyAreas.Area currentArea;
+	private SkyAreas.Area previousArea;
+	private String lastAreaSky;
+	private WorldPoint lastWorld;
+	private final BorderBlend borderBlend = new BorderBlend();
 
 	@Inject
 	private com.google.gson.Gson gson;
@@ -1094,9 +1098,19 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		SkyAreas.Area area = world == null ? null : skyAreas.find(world);
 		if (area != currentArea)
 		{
+			if (area == previousArea && borderBlend.active())
+			{
+				borderBlend.bounce();
+			}
+			else if (world != null)
+			{
+				borderBlend.cross(world.getX(), world.getY());
+			}
+			previousArea = currentArea;
 			currentArea = area;
 			log.info("Sky area: {}", area == null ? "unmapped" : area.name + " sky=" + area.sky + " fog=" + area.fog);
 		}
+		lastWorld = world;
 	}
 
 	/**
@@ -1146,6 +1160,10 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			if (!procedural())
 			{
 				selectCubemap();
+				if (borderBlend.active() && lastWorld != null)
+				{
+					skyboxRenderer.overrideBlend(borderBlend.progress(lastWorld.getX(), lastWorld.getY(), config.skyboxFadeTiles()));
+				}
 			}
 		}
 		boolean ready = procedural() ? proceduralSky.isReady() : skyboxRenderer.isReady();

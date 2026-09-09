@@ -798,7 +798,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxRotation",
 		name = "Rotation",
 		description = "Cubemap: rotate the texture around the vertical axis, in degrees.",
-		position = 9,
+		position = 10,
 		section = cubemapSection
 	)
 	default int skyboxRotation()
@@ -811,7 +811,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxRotationSpeed",
 		name = "Drift speed",
 		description = "Cubemap: slowly rotate the texture over time, in degrees per minute. 0 disables drift.",
-		position = 10,
+		position = 11,
 		section = cubemapSection
 	)
 	default int skyboxRotationSpeed()
@@ -842,5 +842,18 @@ public interface GpuSkyboxConfig extends Config
 	default int skyboxFadeSeconds()
 	{
 		return 4;
+	}
+
+	@Range(min = 0, max = 64)
+	@ConfigItem(
+		keyName = "skyboxFadeTiles",
+		name = "Area fade",
+		description = "Tiles to walk past an area border before the new sky is fully in. Walking back reverses it. 0 = instant.",
+		position = 9,
+		section = cubemapSection
+	)
+	default int skyboxFadeTiles()
+	{
+		return 8;
 	}
 }

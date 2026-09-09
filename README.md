@@ -43,11 +43,13 @@ matching section below it.
 | Moon, Stars | on | procedural |
 | Real star map | on | procedural: NASA Deep Star Map (Gaia DR2) turning with the time of day, instead of generated stars |
 | Cycle length | 24 | procedural, Time of day = CYCLE: real minutes per in-game day |
+| Lightning | on | Sky section: random flashes where 117 HD marks storms (Wilderness high, Barrows, Draynor Manor and its forest, the Misthalin Mystery Manor, Tempoross Cove) |
 | Sun disk | on | procedural: draw the sun itself, not only the glow |
-| Moon size / Moon phase | 100 / 100 | procedural, percent; phase 0 = new moon |
+| Moon size / Moon phase | 100 / 100 | procedural, percent; phase 0 = new moon. Ignored under CLOCK and CYCLE, where the moon follows the calendar |
 | Star brightness | 100 | procedural, percent |
 | Shooting stars, Nebula, Aurora | on / on / off | procedural night-sky extras |
 | Cloud cover / Cloud speed | 30 / 100 | procedural, percent; 0 cover = clear sky, 0 speed = still |
+| Area moods | on | Procedural section: let areas override Time of day (Morytania stays at dusk, Darkmeyer under a blood moon, the desert at high noon) |
 | Overworld only | on | underground keeps the flat colour |
 | Prefer game skybox | off | where Jagex ships a skybox model, draw that instead |
 | Fog colour | AUTO | AUTO (area fog from 117 HD's environment table, else game colour, else sky) / SKYBOX (sky horizon colour) / GAME (client colour, black without the Skybox colour plugin) / CUSTOM |
@@ -57,7 +59,8 @@ matching section below it.
 | Sky brightness | 100 | multiplier in percent |
 | Rotation / Drift speed | 0 / 0 | cubemap: static offset in degrees, drift in degrees per minute |
 | Sky by area | on | pick sky and fog colour from the map area; 162 areas (117 HD tables plus our own continent boxes), 75 with their own sky |
-| Area fade | 4 | cubemap: crossfade seconds when the area sky changes, 0 = instant |
+| Time fade | 4 | seconds for time-of-day and config changes |
+| Area fade | 8 | cubemap: tiles walked past a border until the new sky is fully in; walking back reverses |
 
 Terrain fog itself is "Fog depth" in the Fog and blending section; 0 turns it off.
 Draw distance, AA and the rest are the same as the stock GPU plugin but live in their own config group
