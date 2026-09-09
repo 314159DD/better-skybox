@@ -536,7 +536,7 @@ public interface GpuSkyboxConfig extends Config
 	@ConfigItem(
 		keyName = "moonPhase",
 		name = "Moon phase",
-		description = "Procedural sky: 0 = new moon, 100 = full moon.",
+		description = "Procedural sky: 0 = new moon, 100 = full moon. Ignored under CLOCK and CYCLE, where the moon follows the calendar.",
 		position = 6,
 		section = proceduralSection
 	)

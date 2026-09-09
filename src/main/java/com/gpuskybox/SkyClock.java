@@ -1,6 +1,9 @@
 package com.gpuskybox;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import com.gpuskybox.GpuSkyboxConfig.SkyPreset;
 
 /**
@@ -79,5 +82,36 @@ class SkyClock
 	static float hourForAzimuth(float azimuth)
 	{
 		return ((azimuth - 90) / 15 + 6 + 24) % 24;
+	}
+
+	private static final double SYNODIC_MONTH_DAYS = 29.530588;
+	private static final LocalDateTime REFERENCE_NEW_MOON = LocalDateTime.of(2000, 1, 6, 18, 14);
+
+	/** Fraction of the moon's disk that is lit, 0 = new, 1 = full. */
+	static float moonIllumination(LocalDateTime utc)
+	{
+		double days = ChronoUnit.SECONDS.between(REFERENCE_NEW_MOON, utc) / 86400.0;
+		double age = ((days % SYNODIC_MONTH_DAYS) + SYNODIC_MONTH_DAYS) % SYNODIC_MONTH_DAYS;
+		return (float) ((1 - Math.cos(age / SYNODIC_MONTH_DAYS * 2 * Math.PI)) / 2);
+	}
+
+	/**
+	 * Illumination for the current sky time: the real calendar under CLOCK, one lunar month per 29.5 cycles
+	 * under CYCLE, or -1 when the preset leaves the moon to the slider.
+	 */
+	float moonIllumination(GpuSkyboxConfig config)
+	{
+		switch (config.skyPreset())
+		{
+			case CLOCK:
+				return moonIllumination(LocalDateTime.now(ZoneOffset.UTC));
+			case CYCLE:
+			{
+				double cycles = elapsedSeconds() / (config.cycleMinutes() * 60.0);
+				return (float) ((1 - Math.cos(cycles / SYNODIC_MONTH_DAYS * 2 * Math.PI)) / 2);
+			}
+			default:
+				return -1;
+		}
 	}
 }

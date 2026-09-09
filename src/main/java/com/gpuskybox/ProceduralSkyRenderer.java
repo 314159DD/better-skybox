@@ -159,7 +159,8 @@ class ProceduralSkyRenderer
 			direction(moonDir, 25, azimuth + 180);
 			moonColor = MOON_COLOR;
 			moonSize = config.moonSize() / 100f;
-			moonPhase = config.moonPhase() / 100f;
+			float real = clock.moonIllumination(config);
+			moonPhase = real >= 0 ? real : config.moonPhase() / 100f;
 		}
 
 		evaluate(gradient.zenith, altitude, zenith);
