@@ -26,6 +26,9 @@ uniform vec4 fogColor;
 uniform float horizonBlend;
 uniform float fogTint;
 uniform float brightness;
+uniform samplerCube starMap;   // NASA Deep Star Map, black where there is no star
+uniform float starMapEnabled;  // 0/1
+uniform mat3 starRot;          // world view dir (y down) -> star map lookup
 
 in vec3 fDir;
 
@@ -306,7 +309,9 @@ void main() {
   if (starBlend > 0.001) {
     float a = time * 0.002;
     vec3 sd = vec3(cos(a) * viewDir.x - sin(a) * viewDir.z, viewDir.y, sin(a) * viewDir.x + cos(a) * viewDir.z);
-    vec3 night = starfield(sd) * starBrightness;
+    vec3 night = starMapEnabled > 0.5
+      ? texture(starMap, starRot * viewDir).rgb * starBrightness * 1.6
+      : starfield(sd) * starBrightness;
     if (nebulaVisibility > 0.001)
       night += nebula(sd) * nebulaVisibility;
     sky += night * starBlend;

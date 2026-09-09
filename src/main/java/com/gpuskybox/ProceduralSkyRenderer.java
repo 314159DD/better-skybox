@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalTime;
 import lombok.extern.slf4j.Slf4j;
+import com.gpuskybox.CubemapLoader.Cubemap;
 import com.gpuskybox.GpuSkyboxConfig.SkyPreset;
 import com.gpuskybox.template.Template;
 import static org.lwjgl.opengl.GL33C.*;
@@ -20,6 +21,10 @@ class ProceduralSkyRenderer
 	static final Shader PROGRAM = new Shader()
 		.add(GL_VERTEX_SHADER, "sky_vert.glsl")
 		.add(GL_FRAGMENT_SHADER, "proc_sky_frag.glsl");
+
+	static final int STAR_TEXTURE_UNIT = 4;
+	/** Tilt of the celestial pole towards the horizon; puts the Milky Way in an arc instead of a ring. */
+	private static final double POLE_TILT = Math.toRadians(40);
 
 	private static final float[] BLOOD_MOON_COLOR = rgb(0xED3D3D);
 	private static final float[] MOON_COLOR = rgb(0xE1E5FF);
@@ -39,10 +44,14 @@ class ProceduralSkyRenderer
 
 	private Gradient gradient;
 	private int program;
+	private Cubemap stars;
+	private final float[] starRot = new float[9];
+	private float hour = 12;
 
 	private int uniSkyProj, uniZenith, uniHorizon, uniSun, uniSunDir, uniMoonDir, uniMoonColor, uniMoonVisibility,
 		uniMoonSize, uniMoonPhase, uniStarVisibility, uniStarBrightness, uniShootingStars, uniNebula, uniAurora,
-		uniSunDisk, uniCloudCover, uniCloudTime, uniTime, uniFogColor, uniHorizonBlend, uniFogTint, uniBrightness;
+		uniSunDisk, uniCloudCover, uniCloudTime, uniTime, uniFogColor, uniHorizonBlend, uniFogTint, uniBrightness,
+		uniStarMap, uniStarMapEnabled, uniStarRot;
 
 	private final long startNanos = System.nanoTime();
 
@@ -91,12 +100,22 @@ class ProceduralSkyRenderer
 		uniHorizonBlend = glGetUniformLocation(program, "horizonBlend");
 		uniFogTint = glGetUniformLocation(program, "fogTint");
 		uniBrightness = glGetUniformLocation(program, "brightness");
+		uniStarMap = glGetUniformLocation(program, "starMap");
+		uniStarMapEnabled = glGetUniformLocation(program, "starMapEnabled");
+		uniStarRot = glGetUniformLocation(program, "starRot");
+
+		stars = CubemapLoader.upload("stars", STAR_TEXTURE_UNIT);
 	}
 
 	void shutdownProgram()
 	{
 		glDeleteProgram(program);
 		program = 0;
+		if (stars != null)
+		{
+			glDeleteTextures(stars.texture);
+			stars = null;
+		}
 	}
 
 	boolean isReady()
@@ -121,7 +140,7 @@ class ProceduralSkyRenderer
 			case CLOCK:
 			{
 				LocalTime now = LocalTime.now();
-				float hour = now.getHour() + now.getMinute() / 60f + now.getSecond() / 3600f;
+				hour = now.getHour() + now.getMinute() / 60f + now.getSecond() / 3600f;
 				altitude = altitudeForHour(hour);
 				azimuth = azimuthForHour(hour);
 				break;
@@ -129,7 +148,7 @@ class ProceduralSkyRenderer
 			case CYCLE:
 			{
 				float day = elapsedSeconds() / (config.cycleMinutes() * 60f);
-				float hour = (6 + day * 24) % 24;
+				hour = (6 + day * 24) % 24;
 				altitude = altitudeForHour(hour);
 				azimuth = azimuthForHour(hour);
 				break;
@@ -137,11 +156,14 @@ class ProceduralSkyRenderer
 			case CUSTOM:
 				altitude = config.sunAltitude();
 				azimuth = config.sunAzimuth();
+				hour = hourForAzimuth(azimuth);
 				break;
 			default:
 				altitude = preset.altitude;
 				azimuth = preset.azimuth;
+				hour = hourForAzimuth(azimuth);
 		}
+		starRotation(hour, starRot);
 		direction(sunDir, altitude, azimuth);
 
 		if (preset == SkyPreset.BLOOD_MOON)
@@ -174,6 +196,32 @@ class ProceduralSkyRenderer
 	private static float azimuthForHour(float hour)
 	{
 		return 90 + (hour - 6) * 15;
+	}
+
+	private static float hourForAzimuth(float azimuth)
+	{
+		return ((azimuth - 90) / 15 + 6 + 24) % 24;
+	}
+
+	/**
+	 * Column-major 3x3 that takes a world-space view direction (y down) to a star map lookup: flip to y up, turn the
+	 * sky once per day around the celestial pole, then tilt that pole towards the horizon.
+	 */
+	private static void starRotation(float hour, float[] out)
+	{
+		double a = hour / 24 * 2 * Math.PI;
+		double ca = Math.cos(a), sa = Math.sin(a);
+		double ct = Math.cos(POLE_TILT), st = Math.sin(POLE_TILT);
+		// M = Rx(tilt) * Ry(a) * diag(1, -1, 1); columns are M applied to the unit axes
+		out[0] = (float) ca;
+		out[1] = (float) (st * sa);
+		out[2] = (float) (-ct * sa);
+		out[3] = 0;
+		out[4] = (float) -ct;
+		out[5] = (float) -st;
+		out[6] = (float) sa;
+		out[7] = (float) (-st * ca);
+		out[8] = (float) (ct * ca);
 	}
 
 	/** Horizon colour of the current sky as 0xRRGGBB, for fog. */
@@ -214,11 +262,21 @@ class ProceduralSkyRenderer
 		glUniform1f(uniHorizonBlend, config.skyboxHorizonBlend() / 100f);
 		glUniform1f(uniFogTint, config.skyboxFogTint() / 100f);
 		glUniform1f(uniBrightness, config.skyboxBrightness() / 100f);
+		boolean starMap = stars != null && config.starMap();
+		glUniform1f(uniStarMapEnabled, starMap ? 1f : 0f);
+		if (starMap)
+		{
+			glActiveTexture(GL_TEXTURE0 + STAR_TEXTURE_UNIT);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, stars.texture);
+			glUniform1i(uniStarMap, STAR_TEXTURE_UNIT);
+			glUniformMatrix3fv(uniStarRot, false, starRot);
+		}
 
 		glBindVertexArray(quadVao);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 		glBindVertexArray(0);
 
+		glActiveTexture(GL_TEXTURE0);
 		glDepthMask(true);
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE);

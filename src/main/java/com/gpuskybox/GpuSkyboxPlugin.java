@@ -1085,23 +1085,24 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		return config.skyMode() == GpuSkyboxConfig.SkyMode.PROCEDURAL;
 	}
 
+	private void updateArea()
+	{
+		WorldPoint world = config.skyboxByArea() ? playerWorldPoint() : null;
+		SkyAreas.Area area = world == null ? null : skyAreas.find(world);
+		if (area != currentArea)
+		{
+			currentArea = area;
+			log.info("Sky area: {}", area == null ? "unmapped" : area.name + " sky=" + area.sky + " fog=" + area.fog);
+		}
+	}
+
 	/** Cubemap the current area (or the config) asks for; the manual choice is the fallback for unmapped areas. */
 	private void selectCubemap()
 	{
 		float fade = config.skyboxFadeSeconds();
-		if (config.skyboxByArea())
+		if (currentArea != null && currentArea.sky != null && skyboxRenderer.select(currentArea.sky, fade))
 		{
-			WorldPoint world = playerWorldPoint();
-			SkyAreas.Area area = world == null ? null : skyAreas.find(world.getRegionID());
-			if (area != currentArea)
-			{
-				currentArea = area;
-				log.info("Sky area: {}", area == null ? "unmapped" : area.name + " -> " + area.sky);
-			}
-			if (area != null && skyboxRenderer.select(area.sky, fade))
-			{
-				return;
-			}
+			return;
 		}
 		String manual = config.skyboxTexture() == GpuSkyboxConfig.SkyboxTexture.CUSTOM
 			? config.skyboxCustomName().trim()
@@ -1111,9 +1112,13 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 
 	private boolean shouldDrawCubemap(Scene scene)
 	{
-		if (!procedural() && config.skyboxEnabled())
+		if (config.skyboxEnabled())
 		{
-			selectCubemap();
+			updateArea();
+			if (!procedural())
+			{
+				selectCubemap();
+			}
 		}
 		boolean ready = procedural() ? proceduralSky.isReady() : skyboxRenderer.isReady();
 		boolean draw = config.skyboxEnabled()
@@ -1148,6 +1153,10 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			case CUSTOM:
 				return config.skyboxFogCustomColor().getRGB() & 0xFFFFFF;
 			default:
+				if (currentArea != null && currentArea.fogColor >= 0)
+				{
+					return currentArea.fogColor;
+				}
 				return sky == 0 ? skyHorizonColor() : sky;
 		}
 	}

@@ -275,6 +275,14 @@ public interface GpuSkyboxConfig extends Config
 		DUSK("qwantani_dusk_1_puresky"),
 		MOONRISE("qwantani_moonrise_puresky"),
 		NIGHT("qwantani_night_puresky"),
+		STORM_BREAK("ambientcg_dayskyhdri060b"),
+		DEEP_BLUE("ambientcg_dayskyhdri055b"),
+		PALE_MORNING("ambientcg_morningskyhdri013b"),
+		GOLDEN_HOUR("ambientcg_eveningskyhdri046b"),
+		AURORA_NIGHT("ambientcg_nightskyhdri007"),
+		TOON_BLUE("oga_cloudy_blue"),
+		TOON_SUNSET("oga_cloudy_sunset"),
+		TOON_VIOLET("oga_cloudy_violet"),
 		DEBUG("debug"),
 		CUSTOM(null);
 
@@ -428,6 +436,18 @@ public interface GpuSkyboxConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(
+		keyName = "starMap",
+		name = "Real star map",
+		description = "Procedural sky: use NASA's Deep Star Map (Gaia DR2, 1.7 billion stars) turning with the time of day instead of generated stars.",
+		position = 44,
+		section = skyboxSection
+	)
+	default boolean starMap()
+	{
+		return true;
+	}
+
 	@Range(min = 1, max = 240)
 	@ConfigItem(
 		keyName = "cycleMinutes",
@@ -484,7 +504,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "starBrightness",
 		name = "Star brightness",
 		description = "Procedural sky: star intensity in percent.",
-		position = 44,
+		position = 45,
 		section = skyboxSection
 	)
 	default int starBrightness()
@@ -496,7 +516,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "shootingStars",
 		name = "Shooting stars",
 		description = "Procedural sky: occasional meteors at night.",
-		position = 45,
+		position = 46,
 		section = skyboxSection
 	)
 	default boolean shootingStars()
@@ -508,7 +528,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "nebula",
 		name = "Nebula",
 		description = "Procedural sky: faint coloured nebula clouds behind the stars.",
-		position = 46,
+		position = 47,
 		section = skyboxSection
 	)
 	default boolean nebula()
@@ -520,7 +540,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "aurora",
 		name = "Aurora",
 		description = "Procedural sky: northern lights at night.",
-		position = 47,
+		position = 48,
 		section = skyboxSection
 	)
 	default boolean aurora()
@@ -533,7 +553,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "cloudCover",
 		name = "Cloud cover",
 		description = "Procedural sky: how much of the sky is clouded, in percent. 0 = clear.",
-		position = 48,
+		position = 49,
 		section = skyboxSection
 	)
 	default int cloudCover()
@@ -546,7 +566,7 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "cloudSpeed",
 		name = "Cloud speed",
 		description = "Procedural sky: cloud drift speed in percent. 0 = still.",
-		position = 49,
+		position = 50,
 		section = skyboxSection
 	)
 	default int cloudSpeed()
@@ -581,7 +601,7 @@ public interface GpuSkyboxConfig extends Config
 	@ConfigItem(
 		keyName = "skyboxFogColorMode",
 		name = "Fog colour",
-		description = "SKYBOX: fog takes the sky's horizon colour. GAME: the client's sky colour (needs the Skybox colour plugin, otherwise black). CUSTOM: the colour below. AUTO: game colour when it is set, sky otherwise. Fog depth 0 (above) turns terrain fog off, horizon blend 0 turns the sky fade off.",
+		description = "AUTO: the area's fog colour from 117 HD's environment table where one exists, else the game colour when set, else the sky. SKYBOX: the sky's horizon colour. GAME: the client's sky colour (needs the Skybox colour plugin, otherwise black). CUSTOM: the colour below. Fog depth 0 (above) turns terrain fog off, horizon blend 0 turns the sky fade off.",
 		position = 53,
 		section = skyboxSection
 	)
@@ -670,7 +690,7 @@ public interface GpuSkyboxConfig extends Config
 	@ConfigItem(
 		keyName = "skyboxByArea",
 		name = "Sky by area",
-		description = "Cubemap: pick the sky from the area you are in (Wilderness, Morytania, desert, ...). Areas come from sky_areas.json, override with ~/.runelite/gpu-skybox/sky_areas.json. Unmapped areas use the Cubemap above.",
+		description = "Pick the sky and fog colour from the area you are in (Wilderness, Morytania, desert, ...). Areas come from 117 HD's tables via sky_areas.json, override with ~/.runelite/gpu-skybox/sky_areas.json. Unmapped areas use the Cubemap above.",
 		position = 60,
 		section = skyboxSection
 	)

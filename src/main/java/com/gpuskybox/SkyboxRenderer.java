@@ -1,21 +1,14 @@
 package com.gpuskybox;
 
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
-import javax.imageio.ImageIO;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.client.RuneLite;
+import com.gpuskybox.CubemapLoader.Cubemap;
 import com.gpuskybox.template.Template;
 import static org.lwjgl.opengl.GL33C.*;
 
 /**
  * Draws a cubemap sky as a fullscreen pass before the scene.
- * Faces are looked up first in ~/.runelite/gpu-skybox/&lt;name&gt;/ and then in the bundled resources.
  * Loaded cubemaps stay resident so area changes only pay the decode once; switching crossfades.
  */
 @Slf4j
@@ -25,16 +18,8 @@ class SkyboxRenderer
 		.add(GL_VERTEX_SHADER, "sky_vert.glsl")
 		.add(GL_FRAGMENT_SHADER, "sky_frag.glsl");
 
-	private static final String[] FACES = {"px", "nx", "py", "ny", "pz", "nz"};
-	private static final File CUSTOM_DIR = new File(RuneLite.RUNELITE_DIR, "gpu-skybox");
 	static final int TEXTURE_UNIT = 2;
 	static final int PREV_TEXTURE_UNIT = 3;
-
-	private static class Cubemap
-	{
-		int texture;
-		int horizonColor;
-	}
 
 	private int program;
 	private final Map<String, Cubemap> loaded = new HashMap<>();
@@ -89,7 +74,7 @@ class SkyboxRenderer
 		Cubemap next = loaded.get(name);
 		if (next == null)
 		{
-			next = upload(name);
+			next = CubemapLoader.upload(name, TEXTURE_UNIT);
 			if (next == null)
 			{
 				failedName = name;
@@ -111,39 +96,6 @@ class SkyboxRenderer
 	void retryFailed()
 	{
 		failedName = null;
-	}
-
-	private Cubemap upload(String name)
-	{
-		BufferedImage[] faces = loadFaces(name);
-		if (faces == null)
-		{
-			return null;
-		}
-
-		Cubemap cubemap = new Cubemap();
-		cubemap.horizonColor = averageHorizonColor(faces);
-		cubemap.texture = glGenTextures();
-		glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture);
-		for (int i = 0; i < 6; i++)
-		{
-			BufferedImage face = toIntArgb(faces[i]);
-			int[] pixels = ((DataBufferInt) face.getRaster().getDataBuffer()).getData();
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA8, face.getWidth(), face.getHeight(), 0,
-				GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
-		}
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-		glActiveTexture(GL_TEXTURE0);
-
-		log.info("Loaded skybox '{}' ({}x{} per face)", name, faces[0].getWidth(), faces[0].getHeight());
-		return cubemap;
 	}
 
 	void freeTextures()
@@ -180,8 +132,8 @@ class SkyboxRenderer
 	}
 
 	/**
-	 * Average colour of the horizon band of the cubemap being shown, packed as 0xRRGGBB, blended during a fade.
-	 * Used as the fog colour so terrain fog and the sky fade meet in the same tone.
+	 * Horizon colour of the cubemap being shown, packed as 0xRRGGBB, blended during a fade. Used as the fog colour
+	 * so terrain fog and the sky fade meet in the same tone.
 	 */
 	int getHorizonColor()
 	{
@@ -199,29 +151,6 @@ class SkyboxRenderer
 		int g = Math.round((a >> 8 & 0xFF) + ((b >> 8 & 0xFF) - (a >> 8 & 0xFF)) * t);
 		int bl = Math.round((a & 0xFF) + ((b & 0xFF) - (a & 0xFF)) * t);
 		return r << 16 | g << 8 | bl;
-	}
-
-	private static int averageHorizonColor(BufferedImage[] faces)
-	{
-		long r = 0, g = 0, b = 0, n = 0;
-		for (int i : new int[]{0, 1, 4, 5}) // px, nx, pz, nz: the side faces
-		{
-			BufferedImage face = faces[i];
-			int y0 = (int) (face.getHeight() * 0.48);
-			int y1 = (int) (face.getHeight() * 0.52);
-			for (int y = y0; y < y1; y++)
-			{
-				for (int x = 0; x < face.getWidth(); x++)
-				{
-					int rgb = face.getRGB(x, y);
-					r += rgb >> 16 & 0xFF;
-					g += rgb >> 8 & 0xFF;
-					b += rgb & 0xFF;
-					n++;
-				}
-			}
-		}
-		return (int) (r / n) << 16 | (int) (g / n) << 8 | (int) (b / n);
 	}
 
 	/**
@@ -263,74 +192,5 @@ class SkyboxRenderer
 		glDepthMask(true);
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE);
-	}
-
-	/**
-	 * Six faces from either a 4x2 atlas {@code skybox.png} (row 1: px nz nx pz, row 2: py ny) or six face files.
-	 */
-	private static BufferedImage[] loadFaces(String name)
-	{
-		BufferedImage atlas = loadImage(name, "skybox");
-		if (atlas != null)
-		{
-			int face = atlas.getWidth() / 4;
-			if (atlas.getHeight() < face * 2)
-			{
-				log.warn("Skybox '{}' atlas is {}x{}, expected 4x2 faces", name, atlas.getWidth(), atlas.getHeight());
-				return null;
-			}
-			return new BufferedImage[]{
-				atlas.getSubimage(0, 0, face, face),          // px
-				atlas.getSubimage(face * 2, 0, face, face),   // nx
-				atlas.getSubimage(0, face, face, face),       // py
-				atlas.getSubimage(face, face, face, face),    // ny
-				atlas.getSubimage(face * 3, 0, face, face),   // pz
-				atlas.getSubimage(face, 0, face, face),       // nz
-			};
-		}
-
-		BufferedImage[] faces = new BufferedImage[6];
-		for (int i = 0; i < 6; i++)
-		{
-			faces[i] = loadImage(name, FACES[i]);
-			if (faces[i] == null)
-			{
-				log.warn("Skybox '{}' is missing {}.png (and has no skybox.png atlas)", name, FACES[i]);
-				return null;
-			}
-		}
-		return faces;
-	}
-
-	private static BufferedImage loadImage(String name, String file)
-	{
-		File custom = new File(new File(CUSTOM_DIR, name), file + ".png");
-		try
-		{
-			if (custom.isFile())
-			{
-				return ImageIO.read(custom);
-			}
-			try (InputStream in = SkyboxRenderer.class.getResourceAsStream("skybox/" + name + "/" + file + ".png"))
-			{
-				return in == null ? null : ImageIO.read(in);
-			}
-		}
-		catch (IOException ex)
-		{
-			log.warn("Failed to read skybox image {}", custom, ex);
-			return null;
-		}
-	}
-
-	private static BufferedImage toIntArgb(BufferedImage src)
-	{
-		if (src.getType() == BufferedImage.TYPE_INT_ARGB)
-		{
-			return src;
-		}
-		BufferedImage dst = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_ARGB);
-		dst.getGraphics().drawImage(src, 0, 0, null);
-		return dst;
 	}
 }
