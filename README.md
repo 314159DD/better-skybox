@@ -1,14 +1,15 @@
 ![Better Skybox](docs/img/banner.png)
 
+<p align="center">
+  <a href="https://www.buymeacoffee.com/SteenC"><img src="docs/img/bmc-button.svg" alt="Buy me a Beer" height="50"></a>
+</p>
+
+![Day, sunset, night and dusk in Lumbridge](docs/img/showcase.png)
+
 # Better Skybox
 
 Real skies for the standard RuneLite GPU renderer: cubemap and procedural skies, a day/night cycle, moon phases,
 stars, weather, and per-area skies and fog.
-
-<!-- Screenshots land here once they are captured on the sprint jar. Keep the three file names. -->
-| Lumbridge, day | Night with the star map | Wilderness lightning |
-| --- | --- | --- |
-| ![Lumbridge day](docs/img/lumbridge-day.png) | ![Night stars](docs/img/night-stars.png) | ![Wilderness lightning](docs/img/wilderness-lightning.png) |
 
 ## What it is
 
