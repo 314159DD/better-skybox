@@ -93,7 +93,7 @@ import org.lwjgl.system.Configuration;
 @PluginDescriptor(
 	name = "Better Skybox",
 	description = "Real skies for the standard GPU renderer: cubemap and procedural skies, day/night cycle, moon phases, stars, weather, per-area skies and fog.",
-	tags = {"fog", "draw distance", "skybox", "sky", "graphics", "weather", "day night"},
+	tags = {"gpu", "fog", "draw distance", "skybox", "sky", "graphics", "weather", "day night"},
 	conflicts = {"GPU", "117 HD"},
 	loadInSafeMode = false
 )
