@@ -125,10 +125,10 @@ class ProceduralSkyRenderer
 	/**
 	 * Evaluates sun/moon positions and gradient colours for this frame.
 	 */
-	void update(GpuSkyboxConfig config, SkyClock clock)
+	void update(GpuSkyboxConfig config, SkyClock clock, SkyPreset override)
 	{
-		SkyPreset preset = config.skyPreset();
-		hour = clock.hour(config);
+		SkyPreset preset = override != null ? override : config.skyPreset();
+		hour = override != null ? SkyClock.hourForAzimuth(override.azimuth) : clock.hour(config);
 		float altitude, azimuth;
 		switch (preset)
 		{

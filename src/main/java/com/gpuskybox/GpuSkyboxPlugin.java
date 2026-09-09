@@ -1155,7 +1155,8 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			&& (!config.skyboxOverworldOnly() || isOverworld());
 		if (draw && procedural())
 		{
-			proceduralSky.update(config, skyClock);
+			GpuSkyboxConfig.SkyPreset mood = config.areaMoods() && currentArea != null ? currentArea.presetValue : null;
+			proceduralSky.update(config, skyClock, mood);
 		}
 		return draw;
 	}

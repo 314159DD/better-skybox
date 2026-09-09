@@ -682,6 +682,18 @@ public interface GpuSkyboxConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "areaMoods",
+		name = "Area moods",
+		description = "Let areas override the Time of day: Morytania stays at dusk, Darkmeyer under a blood moon, the desert at high noon.",
+		position = 15,
+		section = proceduralSection
+	)
+	default boolean areaMoods()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "skyboxOverworldOnly",
 		name = "Overworld only",
 		description = "Only draw the sky in the overworld, keep the flat fog colour underground and in dungeons.",

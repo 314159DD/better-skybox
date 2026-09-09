@@ -92,6 +92,14 @@ DUSK_THEMES = {
 DAWN_THEMES = {
     "Misthalin": "qwantani_dawn_puresky", "Asgarnia": "qwantani_dawn_puresky", "Kandarin": "ambientcg_morningskyhdri013b",
 }
+# procedural preset forced per area (GpuSkyboxConfig.SkyPreset names)
+PRESETS = {
+    "MORYTANIA": "DUSK", "VER_SINHAZA": "DUSK", "MEIYERDITCH": "DUSK", "BARROWS": "DUSK",
+    "DARKMEYER": "BLOOD_MOON", "VAMPYRIUM": "BLOOD_MOON", "VAMPYRIUM_FOREST_INSTANCE": "BLOOD_MOON",
+    "KHARIDIAN_DESERT": "DAY", "KHARIDIAN_DESERT_MID": "DAY", "KHARIDIAN_DESERT_DEEP": "DAY",
+    "Lunar Isle": "NIGHT", "ZANARIS": "NIGHT", "ARCEUUS": "DUSK",
+    "WILDERNESS_HIGH": "DUSK", "WILDERNESS_MID": "DUSK",
+}
 
 
 def load(name):
@@ -155,6 +163,8 @@ def entry(areas, name, sky, fog, boxes=None):
     for key, table in (("skyDawn", DAWN_THEMES), ("skyDusk", DUSK_THEMES), ("skyNight", NIGHT_THEMES)):
         if name in table:
             e[key] = table[name]
+    if name in PRESETS:
+        e["preset"] = PRESETS[name]
     if fog:
         e["fog"] = fog
     if aabbs:

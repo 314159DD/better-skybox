@@ -34,6 +34,9 @@ class SkyAreas
 		String fog;
 		/** 117 HD lightningEffects: random flashes while the player is here. */
 		boolean lightning;
+		/** Procedural preset forced in this area (a SkyPreset name), or null. */
+		String preset;
+		transient GpuSkyboxConfig.SkyPreset presetValue;
 		/** [x1, y1, x2, y2, plane1, plane2] in world tiles, inclusive. */
 		int[][] aabbs;
 		/** Region ids (x << 8 | y). */
@@ -96,6 +99,23 @@ class SkyAreas
 		}
 	}
 
+	static GpuSkyboxConfig.SkyPreset parsePreset(String name)
+	{
+		if (name == null)
+		{
+			return null;
+		}
+		try
+		{
+			return GpuSkyboxConfig.SkyPreset.valueOf(name);
+		}
+		catch (IllegalArgumentException ex)
+		{
+			log.warn("sky_areas.json: unknown preset '{}'", name);
+			return null;
+		}
+	}
+
 	private Area[] areas = new Area[0];
 
 	void load(Gson gson)
@@ -121,6 +141,7 @@ class SkyAreas
 			for (Area a : areas)
 			{
 				a.fogColor = a.fog == null ? -1 : Integer.parseInt(a.fog.substring(1), 16);
+				a.presetValue = parsePreset(a.preset);
 			}
 		}
 		catch (Exception ex)

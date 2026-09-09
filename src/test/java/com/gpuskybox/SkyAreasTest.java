@@ -24,4 +24,12 @@ public class SkyAreasTest
 		assertNull(a.skyFor(SkyClock.Phase.DAY));
 		assertNull(a.skyFor(SkyClock.Phase.NIGHT));
 	}
+
+	@Test
+	public void presetStringsResolveToEnumOrNull()
+	{
+		assertEquals(GpuSkyboxConfig.SkyPreset.BLOOD_MOON, SkyAreas.parsePreset("BLOOD_MOON"));
+		assertNull(SkyAreas.parsePreset(null));
+		assertNull(SkyAreas.parsePreset("NOT_A_PRESET"));
+	}
 }
