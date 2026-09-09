@@ -54,7 +54,7 @@ matching section below it.
 | Fog tint | 15 | share of fog colour mixed into the sky |
 | Sky brightness | 100 | multiplier in percent |
 | Rotation / Drift speed | 0 / 0 | cubemap: static offset in degrees, drift in degrees per minute |
-| Sky by area | on | pick sky and fog colour from the map area; 147 areas from 117 HD's tables, 60 with their own sky |
+| Sky by area | on | pick sky and fog colour from the map area; 162 areas (117 HD tables plus our own continent boxes), 75 with their own sky |
 | Area fade | 4 | cubemap: crossfade seconds when the area sky changes, 0 = instant |
 
 Terrain fog itself is "Fog depth" in the Fog and blending section; 0 turns it off.

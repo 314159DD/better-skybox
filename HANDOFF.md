@@ -16,9 +16,10 @@ RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, pl
 3. DONE (2026-09-09 midday): 12 Poly Haven CC0 skies, converter --file/--name/--custom, area skies with
    crossfade (Sky by area, Area fade).
 4. DONE (2026-09-09 afternoon, commit after 71b6edb): research-driven expansion.
-   - 117 HD areas.json + environments.json -> tools/hd_to_sky_areas.py -> sky_areas.json (147 areas, 60
+   - 117 HD areas.json + environments.json -> tools/hd_to_sky_areas.py -> sky_areas.json (162 areas, 75
      with a sky, all with 117 HD fog colour). Matching on world tiles + region boxes, both modes. AUTO fog
-     uses the area colour. Lookups for 28 known places verified against the JSON in Python.
+     uses the area colour. Misthalin/Asgarnia/Kandarin + 13 islands are our own boxes in EXTRA (117 HD has
+     none). Lookups for 37 known places verified against the JSON in Python, 0 unmapped.
    - NASA Deep Star Map 8k -> tools/starmap_to_cubemap.py -> skybox/stars (1024 px faces). Procedural
      sky samples it (Real star map, default on), sky turns with the hour around a pole tilted 40 degrees.
    - 8 more CC0 cubemaps (5 ambientCG, 3 OpenGameArt stylised). Jar is 39 MB now.

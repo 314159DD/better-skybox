@@ -49,8 +49,30 @@ THEMES = {
     "ARCEUUS": DUSK, "ZANARIS": MOONRISE, "EVIL_BOB_ISLAND": PARTLY,
 }
 
-# areas.json names without an environment entry, in priority order, appended after the environment table
-EXTRA = [("WILDERNESS", STORM), ("KARAMJA", PARTLY), ("KOUREND", MOUNTAIN), ("VARLAMORE", CLEAR)]
+DEEP_BLUE = "ambientcg_dayskyhdri055b"
+PALE_MORNING = "ambientcg_morningskyhdri013b"
+
+# Areas without an environment entry, in priority order, appended after the environment table. Either a name
+# from areas.json, or our own world-tile boxes [x1, y1, x2, y2] for the lands 117 HD has no top-level area for.
+# Islands and small lands first, continents last; anything still unmapped keeps the Cubemap setting.
+EXTRA = [
+    ("WILDERNESS", STORM, None), ("KARAMJA", PARTLY, None), ("KOUREND", MOUNTAIN, None), ("VARLAMORE", CLEAR, None),
+    ("Entrana", CLEAR, [[2800, 3328, 2879, 3391]]),
+    ("Crandor", HAZY, [[2816, 3264, 2879, 3327]]),
+    ("Ape Atoll", PARTLY, [[2688, 2688, 2815, 2815]]),
+    ("Lunar Isle", MOONRISE, [[2048, 3840, 2175, 3967]]),
+    ("Miscellania", MOUNTAIN, [[2496, 3840, 2623, 3903]]),
+    ("Isle of Souls", OVERCAST, [[2080, 2880, 2303, 3071]]),
+    ("Corsair Cove", CLEAR, [[2496, 2816, 2623, 2879]]),
+    ("Void Knights Outpost", OVERCAST, [[2624, 2560, 2687, 2623]]),
+    ("Fossil Island", MISTY, [[3584, 3648, 3839, 3903]]),
+    ("Piscatoris", MISTY, [[2304, 3584, 2431, 3711]]),
+    ("Feldip Hills", PARTLY, [[2432, 2880, 2700, 3071]]),
+    ("Al Kharid", CLEAR, [[3264, 3136, 3327, 3330]]),
+    ("Misthalin", PARTLY, [[3066, 3136, 3455, 3519]]),
+    ("Asgarnia", DEEP_BLUE, [[2816, 3136, 3065, 3583]]),
+    ("Kandarin", PALE_MORNING, [[2432, 3072, 2815, 3583]]),
+]
 
 
 def load(name):
@@ -135,8 +157,8 @@ def main():
         e = entry(areas, name, sky, fog)
         if e:
             out.append(e)
-    for name, sky in EXTRA:
-        e = entry(areas, name, sky, None)
+    for name, sky, boxes in EXTRA:
+        e = entry(areas, name, sky, None) if boxes is None else {"name": name, "sky": sky, "aabbs": [norm_aabb(b) for b in boxes]}
         if e:
             out.append(e)
     unknown = [n for n in THEMES if n not in areas]
