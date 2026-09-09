@@ -310,12 +310,14 @@ class SkyboxRenderer
 	}
 
 	/**
-	 * Expects the scene FBO to be bound and cleared. Leaves depth test, cull face and blend as they were.
+	 * Expects the scene FBO bound and cleared and the sky state set: {@link SkyPass#draw} turns depth test,
+	 * depth write and cull face off around both skies and puts them back.
 	 *
 	 * @param skyProj  projection * pitch * yaw, without camera translation
+	 * @param sky      fog colour of this frame as r, g, b in 0..1
 	 * @param quadVao  a VAO whose attribute 0 is a fullscreen quad in clip space (-1..1), drawn as a 4-vertex fan
 	 */
-	void draw(float[] skyProj, int sky, int quadVao, BetterSkyboxConfig config, SkyClock clock, float flash,
+	void draw(float[] skyProj, float[] sky, int quadVao, BetterSkyboxConfig config, SkyClock clock, float flash,
 		StarMap starMap)
 	{
 		double elapsedMinutes = (System.nanoTime() - startNanos) / 60e9;
@@ -323,10 +325,6 @@ class SkyboxRenderer
 		float blend = blend();
 		// nothing to sample until the pixels land, and then the dimming must not run ahead of the stars either
 		float stars = starMap.loaded() ? starAmount() : 0f;
-
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(false);
-		glDisable(GL_CULL_FACE);
 
 		glUseProgram(program);
 		glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT);
@@ -337,7 +335,7 @@ class SkyboxRenderer
 		glUniform1i(uniPrevCubemap, PREV_TEXTURE_UNIT);
 		glUniform1f(uniBlend, blend);
 		glUniformMatrix4fv(uniSkyProj, false, skyProj);
-		glUniform4f(uniFogColor, (sky >> 16 & 0xFF) / 255f, (sky >> 8 & 0xFF) / 255f, (sky & 0xFF) / 255f, 1f);
+		glUniform4f(uniFogColor, sky[0], sky[1], sky[2], 1f);
 		glUniform1f(uniHorizonBlend, config.skyboxHorizonBlend() / 100f);
 		glUniform1f(uniHorizonOffset, (float) Math.sin(Math.toRadians(config.skyboxHorizonOffset())));
 		glUniform1f(uniFogTint, config.skyboxFogTint() / 100f);
@@ -347,18 +345,16 @@ class SkyboxRenderer
 		glUniform1f(uniStarAmount, stars);
 		glUniform1f(uniStarBrightness, config.starBrightness() / 100f);
 		glUniform1f(uniStarDim, config.nightStarsDim() / 100f);
+		// every frame, stars or not: left at 0 the cube sampler shares a unit with the interface 2D texture,
+		// which is undefined behaviour and fails glValidateProgram on some drivers
+		glUniform1i(uniStarMap, StarMap.TEXTURE_UNIT);
 		if (stars > 0f)
 		{
-			starMap.bind(uniStarMap, uniStarRot, clock.hour(config));
+			starMap.bind(uniStarRot, clock.hour(config));
 		}
 
 		glBindVertexArray(quadVao);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 		glBindVertexArray(0);
-
-		glActiveTexture(GL_TEXTURE0);
-		glDepthMask(true);
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
 	}
 }

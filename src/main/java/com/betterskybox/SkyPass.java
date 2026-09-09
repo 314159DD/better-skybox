@@ -98,6 +98,8 @@ class SkyPass
 
 	/** Whether the sky pass draws this frame; decided by beginFrame, read by fogColor and the plugin. */
 	private boolean drawing;
+	/** This frame's fog colour as r, g, b in 0..1, held so unpacking it allocates nothing. */
+	private final float[] fogRgb = new float[3];
 	private float flash;
 	private SkyAreas.Area currentArea;
 	private SkyAreas.Area previousArea;
@@ -208,14 +210,19 @@ class SkyPass
 	}
 
 	/**
-	 * Clears the scene FBO to the fog colour and draws the sky into it. Leaves {@code restoreProgram} bound.
+	 * Clears the scene FBO to the fog colour and draws the sky into it. Owns the state both skies need, so
+	 * neither has to: depth test, depth write and cull face are off for the fullscreen quad and put back after
+	 * it. Leaves {@code restoreProgram} bound.
 	 *
 	 * @param quadVao a VAO whose attribute 0 is a fullscreen quad in clip space (-1..1), drawn as a 4-vertex fan
 	 */
 	void draw(int fog, float cameraPitch, float cameraYaw, int viewportWidth, int viewportHeight, int quadVao,
 		int restoreProgram)
 	{
-		glClearColor((fog >> 16 & 0xFF) / 255f, (fog >> 8 & 0xFF) / 255f, (fog & 0xFF) / 255f, 1f);
+		fogRgb[0] = (fog >> 16 & 0xFF) / 255f;
+		fogRgb[1] = (fog >> 8 & 0xFF) / 255f;
+		fogRgb[2] = (fog & 0xFF) / 255f;
+		glClearColor(fogRgb[0], fogRgb[1], fogRgb[2], 1f);
 		glClearDepth(0d);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -223,14 +230,22 @@ class SkyPass
 		Mat4.mul(skyProj, Mat4.projection(viewportWidth, viewportHeight, 50));
 		Mat4.mul(skyProj, Mat4.rotateX(cameraPitch));
 		Mat4.mul(skyProj, Mat4.rotateY(cameraYaw));
+
+		glDisable(GL_DEPTH_TEST);
+		glDepthMask(false);
+		glDisable(GL_CULL_FACE);
 		if (procedural())
 		{
-			proceduralSky.draw(skyProj, fog, quadVao, config, skyClock, flash, starMap);
+			proceduralSky.draw(skyProj, fogRgb, quadVao, config, skyClock, flash, starMap);
 		}
 		else
 		{
-			skyboxRenderer.draw(skyProj, fog, quadVao, config, skyClock, flash, starMap);
+			skyboxRenderer.draw(skyProj, fogRgb, quadVao, config, skyClock, flash, starMap);
 		}
+		glActiveTexture(GL_TEXTURE0);
+		glDepthMask(true);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
 
 		glUseProgram(restoreProgram);
 	}

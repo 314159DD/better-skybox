@@ -117,12 +117,14 @@ class StarMap
 		return stars != null;
 	}
 
-	/** Binds the star map to its unit and sets the sampler and rotation uniforms of the bound program. */
-	void bind(int uniStarMap, int uniStarRot, float hour)
+	/**
+	 * Binds the star map to its unit and sets the rotation uniform of the bound program. The sampler itself is
+	 * set by both renderers on every frame, drawn stars or not, so it never points at another unit.
+	 */
+	void bind(int uniStarRot, float hour)
 	{
 		glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, stars.texture);
-		glUniform1i(uniStarMap, TEXTURE_UNIT);
 		rotation(hour, rot);
 		glUniformMatrix3fv(uniStarRot, false, rot);
 	}

@@ -218,14 +218,16 @@ class ProceduralSkyRenderer
 		return Math.round(horizon[0] * 255) << 16 | Math.round(horizon[1] * 255) << 8 | Math.round(horizon[2] * 255);
 	}
 
-	void draw(float[] skyProj, int fog, int quadVao, BetterSkyboxConfig config, SkyClock clock, float flash,
+	/**
+	 * Expects the scene FBO bound and cleared and the sky state set: {@link SkyPass#draw} turns depth test,
+	 * depth write and cull face off around both skies and puts them back.
+	 *
+	 * @param fog fog colour of this frame as r, g, b in 0..1
+	 */
+	void draw(float[] skyProj, float[] fog, int quadVao, BetterSkyboxConfig config, SkyClock clock, float flash,
 		StarMap starMap)
 	{
 		float seconds = clock.elapsedSeconds();
-
-		glDisable(GL_DEPTH_TEST);
-		glDepthMask(false);
-		glDisable(GL_CULL_FACE);
 
 		glUseProgram(program);
 		glUniformMatrix4fv(uniSkyProj, false, skyProj);
@@ -247,7 +249,7 @@ class ProceduralSkyRenderer
 		glUniform1f(uniCloudCover, config.cloudCover() / 100f);
 		glUniform1f(uniCloudTime, seconds * config.cloudSpeed() / 100f);
 		glUniform1f(uniTime, seconds);
-		glUniform4f(uniFogColor, (fog >> 16 & 0xFF) / 255f, (fog >> 8 & 0xFF) / 255f, (fog & 0xFF) / 255f, 1f);
+		glUniform4f(uniFogColor, fog[0], fog[1], fog[2], 1f);
 		glUniform1f(uniHorizonBlend, config.skyboxHorizonBlend() / 100f);
 		glUniform1f(uniHorizonOffset, (float) Math.sin(Math.toRadians(config.skyboxHorizonOffset())));
 		glUniform1f(uniFogTint, config.skyboxFogTint() / 100f);
@@ -256,19 +258,17 @@ class ProceduralSkyRenderer
 		// loaded only while the star map setting is on, see StarMap.want()
 		boolean stars = starMap.loaded();
 		glUniform1f(uniStarMapEnabled, stars ? 1f : 0f);
+		// every frame, stars or not: left at 0 the cube sampler shares a unit with the interface 2D texture,
+		// which is undefined behaviour and fails glValidateProgram on some drivers
+		glUniform1i(uniStarMap, StarMap.TEXTURE_UNIT);
 		if (stars)
 		{
-			starMap.bind(uniStarMap, uniStarRot, hour);
+			starMap.bind(uniStarRot, hour);
 		}
 
 		glBindVertexArray(quadVao);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 		glBindVertexArray(0);
-
-		glActiveTexture(GL_TEXTURE0);
-		glDepthMask(true);
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_CULL_FACE);
 	}
 
 	/** y-up direction from altitude/azimuth in degrees, matching 117 HD's convention. */

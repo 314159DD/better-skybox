@@ -36,7 +36,8 @@ void main() {
   float stars = starAmount * t;
   if (stars > 0.001) {
     sky *= mix(1.0, 1.0 - starDim, stars);
-    sky += texture(starMap, starRot * d).rgb * starBrightness * 1.6 * stars;
+    // brightness scales the stars too, as it does in proc_sky_frag.glsl: one setting, one behaviour
+    sky += texture(starMap, starRot * d).rgb * starBrightness * 1.6 * stars * brightness;
   }
 
   sky = mix(sky, fogColor.rgb, fogTint);
