@@ -142,6 +142,8 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 
 	@Inject
 	private ProceduralSkyRenderer proceduralSky;
+	private final SkyAreas skyAreas = new SkyAreas();
+	private SkyAreas.Area currentArea;
 
 	@Inject
 	private com.google.gson.Gson gson;
@@ -433,7 +435,7 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		try
 		{
 			skyboxRenderer.initProgram(template);
-			skyboxRenderer.loadCubemap(config);
+			skyAreas.load(gson);
 		}
 		catch (ShaderException ex)
 		{
@@ -498,7 +500,7 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 				root.free();
 
 				shutdownInterfaceTexture();
-				skyboxRenderer.freeTexture();
+				skyboxRenderer.freeTextures();
 				skyboxRenderer.shutdownProgram();
 				proceduralSky.shutdownProgram();
 				shutdownProgram();
@@ -571,11 +573,8 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 			}
 			else if (configChanged.getKey().equals("skyboxCubemap") || configChanged.getKey().equals("skyboxCustomName"))
 			{
-				// block form on purpose: the BooleanSupplier overload would retry a failed load every frame
-				clientThread.invokeLater(() ->
-				{
-					skyboxRenderer.loadCubemap(config);
-				});
+				// the cubemap itself is selected per frame in shouldDrawCubemap; just allow a fixed folder another try
+				skyboxRenderer.retryFailed();
 			}
 			else if (configChanged.getKey().equals("numThreads"))
 			{
@@ -1086,8 +1085,36 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		return config.skyMode() == GpuSkyboxConfig.SkyMode.PROCEDURAL;
 	}
 
+	/** Cubemap the current area (or the config) asks for; the manual choice is the fallback for unmapped areas. */
+	private void selectCubemap()
+	{
+		float fade = config.skyboxFadeSeconds();
+		if (config.skyboxByArea())
+		{
+			WorldPoint world = playerWorldPoint();
+			SkyAreas.Area area = world == null ? null : skyAreas.find(world.getRegionID());
+			if (area != currentArea)
+			{
+				currentArea = area;
+				log.info("Sky area: {}", area == null ? "unmapped" : area.name + " -> " + area.sky);
+			}
+			if (area != null && skyboxRenderer.select(area.sky, fade))
+			{
+				return;
+			}
+		}
+		String manual = config.skyboxTexture() == GpuSkyboxConfig.SkyboxTexture.CUSTOM
+			? config.skyboxCustomName().trim()
+			: config.skyboxTexture().dir;
+		skyboxRenderer.select(manual, fade);
+	}
+
 	private boolean shouldDrawCubemap(Scene scene)
 	{
+		if (!procedural() && config.skyboxEnabled())
+		{
+			selectCubemap();
+		}
 		boolean ready = procedural() ? proceduralSky.isReady() : skyboxRenderer.isReady();
 		boolean draw = config.skyboxEnabled()
 			&& ready
@@ -1177,17 +1204,22 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		glUniformMatrix4fv(uniEntityProj, false, IDENTITY);
 	}
 
-	private boolean isOverworld()
+	private WorldPoint playerWorldPoint()
 	{
 		Player player = client.getLocalPlayer();
 		if (player == null)
 		{
-			return false;
+			return null;
 		}
 		LocalPoint local = player.getLocalLocation();
-		WorldPoint world = client.getTopLevelWorldView().isInstance()
+		return client.getTopLevelWorldView().isInstance()
 			? WorldPoint.fromLocalInstance(client, local)
 			: player.getWorldLocation();
+	}
+
+	private boolean isOverworld()
+	{
+		WorldPoint world = playerWorldPoint();
 		return world != null && world.getY() < Constants.OVERWORLD_MAX_Y;
 	}
 

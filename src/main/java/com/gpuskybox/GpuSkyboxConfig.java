@@ -263,6 +263,18 @@ public interface GpuSkyboxConfig extends Config
 	{
 		RS3_GREENLANDS("rs3_greenlands"),
 		RS3_MAGICBLUE("rs3_magicblue"),
+		PARTLY_CLOUDY("kloofendal_48d_partly_cloudy_puresky"),
+		CLEAR("syferfontein_18d_clear_puresky"),
+		OVERCAST("kloofendal_overcast_puresky"),
+		MISTY("kloofendal_28d_misty_puresky"),
+		STORM_CLOUDS("wasteland_clouds_puresky"),
+		MOUNTAIN("drakensberg_solitary_mountain_puresky"),
+		SNOW("snow_field_puresky"),
+		SUNSET("qwantani_sunset_puresky"),
+		HAZY_SUNSET("industrial_sunset_puresky"),
+		DUSK("qwantani_dusk_1_puresky"),
+		MOONRISE("qwantani_moonrise_puresky"),
+		NIGHT("qwantani_night_puresky"),
 		DEBUG("debug"),
 		CUSTOM(null);
 
@@ -333,7 +345,7 @@ public interface GpuSkyboxConfig extends Config
 	@ConfigItem(
 		keyName = "skyboxCubemap",
 		name = "Cubemap",
-		description = "Bundled cubemap, or CUSTOM to use the folder named below.",
+		description = "Bundled cubemap (RS3 rips or Poly Haven CC0 skies), or CUSTOM to use the folder named below. With Sky by area on, this is the sky for unmapped areas.",
 		position = 33,
 		section = skyboxSection
 	)
@@ -653,5 +665,30 @@ public interface GpuSkyboxConfig extends Config
 	default int skyboxRotationSpeed()
 	{
 		return 0;
+	}
+
+	@ConfigItem(
+		keyName = "skyboxByArea",
+		name = "Sky by area",
+		description = "Cubemap: pick the sky from the area you are in (Wilderness, Morytania, desert, ...). Areas come from sky_areas.json, override with ~/.runelite/gpu-skybox/sky_areas.json. Unmapped areas use the Cubemap above.",
+		position = 60,
+		section = skyboxSection
+	)
+	default boolean skyboxByArea()
+	{
+		return true;
+	}
+
+	@Range(min = 0, max = 30)
+	@ConfigItem(
+		keyName = "skyboxFadeSeconds",
+		name = "Area fade",
+		description = "Cubemap: seconds to crossfade when the sky changes with the area. 0 = instant.",
+		position = 61,
+		section = skyboxSection
+	)
+	default int skyboxFadeSeconds()
+	{
+		return 4;
 	}
 }

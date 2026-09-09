@@ -5,6 +5,8 @@ import java.awt.image.DataBufferInt;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 import javax.imageio.ImageIO;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.RuneLite;
@@ -14,6 +16,7 @@ import static org.lwjgl.opengl.GL33C.*;
 /**
  * Draws a cubemap sky as a fullscreen pass before the scene.
  * Faces are looked up first in ~/.runelite/gpu-skybox/&lt;name&gt;/ and then in the bundled resources.
+ * Loaded cubemaps stay resident so area changes only pay the decode once; switching crossfades.
  */
 @Slf4j
 class SkyboxRenderer
@@ -25,13 +28,26 @@ class SkyboxRenderer
 	private static final String[] FACES = {"px", "nx", "py", "ny", "pz", "nz"};
 	private static final File CUSTOM_DIR = new File(RuneLite.RUNELITE_DIR, "gpu-skybox");
 	static final int TEXTURE_UNIT = 2;
+	static final int PREV_TEXTURE_UNIT = 3;
+
+	private static class Cubemap
+	{
+		int texture;
+		int horizonColor;
+	}
 
 	private int program;
-	private int texture;
-	private int horizonColor;
+	private final Map<String, Cubemap> loaded = new HashMap<>();
+	private String failedName;
+	private Cubemap current;
+	private Cubemap previous;
+	private long fadeStartNanos;
+	private float fadeSeconds;
 
 	private int uniSkyProj;
 	private int uniCubemap;
+	private int uniPrevCubemap;
+	private int uniBlend;
 	private int uniFogColor;
 	private int uniHorizonBlend;
 	private int uniFogTint;
@@ -45,6 +61,8 @@ class SkyboxRenderer
 		program = PROGRAM.compile(template);
 		uniSkyProj = glGetUniformLocation(program, "skyProj");
 		uniCubemap = glGetUniformLocation(program, "cubemap");
+		uniPrevCubemap = glGetUniformLocation(program, "prevCubemap");
+		uniBlend = glGetUniformLocation(program, "blend");
 		uniFogColor = glGetUniformLocation(program, "fogColor");
 		uniHorizonBlend = glGetUniformLocation(program, "horizonBlend");
 		uniFogTint = glGetUniformLocation(program, "fogTint");
@@ -59,31 +77,55 @@ class SkyboxRenderer
 	}
 
 	/**
-	 * Uploads the cubemap selected in the config. On failure the previous texture is dropped and false is returned.
+	 * Makes {@code name} the current cubemap, loading it on first use, and starts a crossfade from the one shown
+	 * before. Returns false when the cubemap cannot be loaded; that name is then skipped until {@link #retryFailed()}.
 	 */
-	boolean loadCubemap(GpuSkyboxConfig config)
+	boolean select(String name, float fadeSeconds)
 	{
-		String name = config.skyboxTexture() == GpuSkyboxConfig.SkyboxTexture.CUSTOM
-			? config.skyboxCustomName().trim()
-			: config.skyboxTexture().dir;
-		freeTexture();
-		if (name.isEmpty())
+		if (name.isEmpty() || name.equals(failedName))
 		{
-			// the text field fires a config change per keystroke, so stay quiet here
 			return false;
 		}
+		Cubemap next = loaded.get(name);
+		if (next == null)
+		{
+			next = upload(name);
+			if (next == null)
+			{
+				failedName = name;
+				return false;
+			}
+			loaded.put(name, next);
+		}
+		if (next != current)
+		{
+			previous = current;
+			current = next;
+			fadeStartNanos = System.nanoTime();
+			this.fadeSeconds = previous == null ? 0 : fadeSeconds;
+		}
+		return true;
+	}
 
+	/** Forget the last failed name so a fixed folder gets another attempt. */
+	void retryFailed()
+	{
+		failedName = null;
+	}
+
+	private Cubemap upload(String name)
+	{
 		BufferedImage[] faces = loadFaces(name);
 		if (faces == null)
 		{
-			return false;
+			return null;
 		}
 
-		horizonColor = averageHorizonColor(faces);
-
-		texture = glGenTextures();
+		Cubemap cubemap = new Cubemap();
+		cubemap.horizonColor = averageHorizonColor(faces);
+		cubemap.texture = glGenTextures();
 		glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture);
 		for (int i = 0; i < 6; i++)
 		{
 			BufferedImage face = toIntArgb(faces[i]);
@@ -101,30 +143,62 @@ class SkyboxRenderer
 		glActiveTexture(GL_TEXTURE0);
 
 		log.info("Loaded skybox '{}' ({}x{} per face)", name, faces[0].getWidth(), faces[0].getHeight());
-		return true;
+		return cubemap;
 	}
 
-	void freeTexture()
+	void freeTextures()
 	{
-		if (texture != 0)
+		for (Cubemap c : loaded.values())
 		{
-			glDeleteTextures(texture);
-			texture = 0;
+			glDeleteTextures(c.texture);
 		}
+		loaded.clear();
+		current = null;
+		previous = null;
+		failedName = null;
 	}
 
 	boolean isReady()
 	{
-		return program != 0 && texture != 0;
+		return program != 0 && current != null;
+	}
+
+	/** 0 = still showing the previous cubemap, 1 = fade finished. */
+	private float blend()
+	{
+		if (previous == null || fadeSeconds <= 0)
+		{
+			return 1f;
+		}
+		float t = (System.nanoTime() - fadeStartNanos) / (fadeSeconds * 1e9f);
+		if (t >= 1f)
+		{
+			previous = null;
+			return 1f;
+		}
+		return t;
 	}
 
 	/**
-	 * Average colour of the horizon band of the loaded cubemap, packed as 0xRRGGBB. Used as the fog colour so
-	 * terrain fog and the sky fade meet in the same tone instead of the client's flat sky colour.
+	 * Average colour of the horizon band of the cubemap being shown, packed as 0xRRGGBB, blended during a fade.
+	 * Used as the fog colour so terrain fog and the sky fade meet in the same tone.
 	 */
 	int getHorizonColor()
 	{
-		return horizonColor;
+		float t = blend();
+		if (t >= 1f)
+		{
+			return current.horizonColor;
+		}
+		return mixColor(previous.horizonColor, current.horizonColor, t);
+	}
+
+	private static int mixColor(int a, int b, float t)
+	{
+		int r = Math.round((a >> 16 & 0xFF) + ((b >> 16 & 0xFF) - (a >> 16 & 0xFF)) * t);
+		int g = Math.round((a >> 8 & 0xFF) + ((b >> 8 & 0xFF) - (a >> 8 & 0xFF)) * t);
+		int bl = Math.round((a & 0xFF) + ((b & 0xFF) - (a & 0xFF)) * t);
+		return r << 16 | g << 8 | bl;
 	}
 
 	private static int averageHorizonColor(BufferedImage[] faces)
@@ -160,6 +234,7 @@ class SkyboxRenderer
 	{
 		double elapsedMinutes = (System.nanoTime() - startNanos) / 60e9;
 		float rotationDeg = (float) ((config.skyboxRotation() + elapsedMinutes * config.skyboxRotationSpeed()) % 360.0);
+		float blend = blend();
 
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(false);
@@ -167,8 +242,12 @@ class SkyboxRenderer
 
 		glUseProgram(program);
 		glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, current.texture);
+		glActiveTexture(GL_TEXTURE0 + PREV_TEXTURE_UNIT);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, blend < 1f ? previous.texture : current.texture);
 		glUniform1i(uniCubemap, TEXTURE_UNIT);
+		glUniform1i(uniPrevCubemap, PREV_TEXTURE_UNIT);
+		glUniform1f(uniBlend, blend);
 		glUniformMatrix4fv(uniSkyProj, false, skyProj);
 		glUniform4f(uniFogColor, (sky >> 16 & 0xFF) / 255f, (sky >> 8 & 0xFF) / 255f, (sky & 0xFF) / 255f, 1f);
 		glUniform1f(uniHorizonBlend, config.skyboxHorizonBlend() / 100f);

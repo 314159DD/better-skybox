@@ -1,12 +1,16 @@
-"""Download Poly Haven (CC0) tonemapped sky panoramas and convert them to 6 cubemap faces.
+"""Turn equirectangular sky panoramas into the 6 cubemap faces the plugin loads.
 
-Usage: python tools/polyhaven_to_cubemap.py <asset_name> [<asset_name> ...]
-Writes src/main/resources/com/gpuskybox/skybox/<asset_name>/{px,nx,py,ny,pz,nz}.png (512x512).
-Face convention matches SkyboxRenderer.equirectToFaces in Java (standard GL cubemap layout).
+Usage:
+  python tools/polyhaven_to_cubemap.py <polyhaven_asset> [...]      download CC0 tonemapped JPGs from Poly Haven
+  python tools/polyhaven_to_cubemap.py --file <panorama> --name <n>  convert a local 2:1 panorama (image gen output)
+  add --custom to write to ~/.runelite/gpu-skybox/<name>/ instead of the bundled resources
+
+Writes <out>/<name>/{px,nx,py,ny,pz,nz}.png (512x512). Face convention is the standard GL cubemap
+layout, matching sky_frag.glsl (sample direction y up).
 """
+import argparse
 import json
 import os
-import sys
 import urllib.request
 
 import numpy as np
@@ -14,9 +18,15 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(ROOT, "ref", "polyhaven")
-OUT = os.path.join(ROOT, "src", "main", "resources", "com", "gpuskybox", "skybox")
+BUNDLED = os.path.join(ROOT, "src", "main", "resources", "com", "gpuskybox", "skybox")
+CUSTOM = os.path.join(os.path.expanduser("~"), ".runelite", "gpu-skybox")
 FACE = 512
+UA = {"User-Agent": "gpu-skybox/0.1 (RuneLite plugin, github.com/314159DD)"}
 Image.MAX_IMAGE_PIXELS = None
+
+
+def fetch(url):
+    return urllib.request.urlopen(urllib.request.Request(url, headers=UA))
 
 
 def download(name):
@@ -24,10 +34,11 @@ def download(name):
     path = os.path.join(CACHE, name + ".jpg")
     if os.path.exists(path):
         return path
-    with urllib.request.urlopen(f"https://api.polyhaven.com/files/{name}") as r:
+    with fetch(f"https://api.polyhaven.com/files/{name}") as r:
         url = json.load(r)["tonemapped"]["url"]
     print("downloading", url)
-    urllib.request.urlretrieve(url, path)
+    with fetch(url) as r, open(path, "wb") as f:
+        f.write(r.read())
     return path
 
 
@@ -52,14 +63,13 @@ def face_dirs(face):
     return d / np.linalg.norm(d, axis=-1, keepdims=True)
 
 
-def convert(name):
-    src = download(name)
+def convert(src, name, out_root):
     img = Image.open(src).convert("RGB")
     if img.width > 4096:
         img = img.resize((4096, 2048), Image.LANCZOS)
     eq = np.asarray(img)
     h, w = eq.shape[:2]
-    out_dir = os.path.join(OUT, name)
+    out_dir = os.path.join(out_root, name)
     os.makedirs(out_dir, exist_ok=True)
     for face in ("px", "nx", "py", "ny", "pz", "nz"):
         d = face_dirs(face)
@@ -72,5 +82,16 @@ def convert(name):
 
 
 if __name__ == "__main__":
-    for n in sys.argv[1:]:
-        convert(n)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("assets", nargs="*", help="Poly Haven asset names")
+    ap.add_argument("--file", help="local equirectangular panorama instead of a Poly Haven asset")
+    ap.add_argument("--name", help="folder name for --file")
+    ap.add_argument("--custom", action="store_true", help="write to ~/.runelite/gpu-skybox/ instead of the resources")
+    args = ap.parse_args()
+    out_root = CUSTOM if args.custom else BUNDLED
+    if args.file:
+        if not args.name:
+            ap.error("--file needs --name")
+        convert(args.file, args.name, out_root)
+    for asset in args.assets:
+        convert(download(asset), asset, out_root)

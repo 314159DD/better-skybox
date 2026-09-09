@@ -1,0 +1,12 @@
+[
+  {"name": "Wintertodt", "sky": "snow_field_puresky", "regions": [[25, 61, 26, 62]]},
+  {"name": "Mort Myre Swamp", "sky": "kloofendal_28d_misty_puresky", "regions": [[53, 52, 54, 53]]},
+  {"name": "Wilderness", "sky": "wasteland_clouds_puresky", "regions": [[46, 55, 54, 63]]},
+  {"name": "Morytania", "sky": "kloofendal_overcast_puresky", "regions": [[53, 49, 58, 56], [57, 58, 59, 60]]},
+  {"name": "Kharidian Desert", "sky": "syferfontein_18d_clear_puresky", "regions": [[50, 43, 53, 48]]},
+  {"name": "Karamja", "sky": "kloofendal_48d_partly_cloudy_puresky", "regions": [[42, 46, 46, 50]]},
+  {"name": "Fremennik and Troll Country", "sky": "snow_field_puresky", "regions": [[36, 57, 45, 63]]},
+  {"name": "Tirannwn", "sky": "kloofendal_28d_misty_puresky", "regions": [[32, 47, 37, 51]]},
+  {"name": "Great Kourend", "sky": "drakensberg_solitary_mountain_puresky", "regions": [[20, 53, 31, 61]]},
+  {"name": "Varlamore", "sky": "syferfontein_18d_clear_puresky", "regions": [[20, 42, 31, 50]]}
+]

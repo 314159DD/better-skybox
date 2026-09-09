@@ -1,6 +1,8 @@
 #version 330
 
 uniform samplerCube cubemap;
+uniform samplerCube prevCubemap; // cubemap shown before the last area change
+uniform float blend;            // 0 = prevCubemap, 1 = cubemap
 uniform vec4 fogColor;
 uniform float horizonBlend;  // width of the fog -> sky fade above the horizon, in units of the up component
 uniform float fogTint;       // 0..1, share of fog colour mixed into the whole sky
@@ -20,7 +22,7 @@ void main() {
   float s = sin(rotation);
   vec3 sampleDir = vec3(c * d.x - s * d.z, up, s * d.x + c * d.z);
 
-  vec3 sky = texture(cubemap, sampleDir).rgb * brightness;
+  vec3 sky = mix(texture(prevCubemap, sampleDir).rgb, texture(cubemap, sampleDir).rgb, blend) * brightness;
   sky = mix(sky, fogColor.rgb, fogTint);
 
   float t = smoothstep(0.0, max(horizonBlend, 0.001), up);
