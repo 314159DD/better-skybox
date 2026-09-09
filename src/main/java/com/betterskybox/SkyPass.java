@@ -179,9 +179,9 @@ class SkyPass
 		}
 		// the crossfade moves exactly once per frame, after this frame's blend override has been set
 		skyboxRenderer.advanceFade();
-		starMap.want(config.skyboxEnabled() && (procedural()
-			? config.starMap() && proceduralSky.isReady()
-			: config.nightStars() && skyboxRenderer.wantsStars()));
+		// the setting governs the texture, the flag only this frame's drawing: see StarMap.want
+		boolean starsOn = config.skyboxEnabled() && (procedural() ? config.starMap() : config.nightStars());
+		starMap.want(starsOn && (procedural() ? proceduralSky.isReady() : skyboxRenderer.wantsStars()), starsOn);
 		boolean ready = procedural() ? proceduralSky.isReady() : skyboxRenderer.isReady();
 		boolean draw = config.skyboxEnabled()
 			&& ready
@@ -240,8 +240,15 @@ class SkyPass
 		if (configChanged.getKey().equals("skyboxCubemap") || configChanged.getKey().equals("skyboxCustomName"))
 		{
 			// the cubemap itself is selected per frame in beginFrame; just allow a fixed folder another try
-			clientThread.invokeLater(skyboxRenderer::retryFailed);
+			clientThread.invokeLater(this::retryFailed);
 		}
+	}
+
+	/** Client thread: every folder that could not be read gets another attempt, the skies' and the stars'. */
+	private void retryFailed()
+	{
+		skyboxRenderer.retryFailed();
+		starMap.retryFailed();
 	}
 
 	private boolean procedural()

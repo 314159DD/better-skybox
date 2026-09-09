@@ -24,6 +24,7 @@
  */
 package com.betterskybox;
 
+import java.util.function.Supplier;
 import javax.inject.Inject;
 import com.betterskybox.CubemapLoads.Slot;
 import com.betterskybox.CubemapLoader.Cubemap;
@@ -46,37 +47,68 @@ class StarMap
 	/** Tilt of the celestial pole towards the horizon; puts the Milky Way in an arc instead of a ring. */
 	private static final double POLE_TILT = Math.toRadians(40);
 
-	@Inject
-	private CubemapLoads loads;
+	private final CubemapLoads loads;
+	/** The decode itself, so a test can stand in for the bundled folder instead of reading 9.6 MB of it. */
+	private final Supplier<Faces> decode;
 
 	private Cubemap stars;
+	/** Set when the folder cannot be read, so a broken custom one is not handed to the loader every frame. */
+	private boolean failed;
 	private final float[] rot = new float[9];
 
-	/**
-	 * Asks for the star map on the first frame it is wanted and frees it on the first frame it is not, so a
-	 * session that never shows stars does not decode it and no frame waits for the decode. Call every frame.
-	 */
-	void want(boolean wanted)
+	@Inject
+	StarMap(CubemapLoads loads)
 	{
-		if (wanted)
-		{
-			if (stars == null)
-			{
-				loads.request(Slot.STARS, STARS, () -> CubemapLoader.decode(STARS), this::upload);
-			}
-			return;
-		}
-		free();
+		this(loads, () -> CubemapLoader.decode(STARS));
 	}
 
-	/** Drops the texture. Call while the context is still alive. */
+	StarMap(CubemapLoads loads, Supplier<Faces> decode)
+	{
+		this.loads = loads;
+		this.decode = decode;
+	}
+
+	/**
+	 * Asks for the star map on the first frame it is wanted and keeps it while its setting is on, so a session
+	 * that never shows stars does not decode it, no frame waits for the decode, and a night that ends does not
+	 * throw away pixels the next one would pay for again. Call every frame.
+	 *
+	 * @param wanted    whether a sky draws the star map this frame
+	 * @param settingOn whether the setting behind it is on: Star map for the procedural sky, Night stars for the
+	 *                  cubemap sky. The texture is freed when that goes off, and on shutdown.
+	 */
+	void want(boolean wanted, boolean settingOn)
+	{
+		if (!settingOn)
+		{
+			free();
+			return;
+		}
+		if (wanted && stars == null && !failed)
+		{
+			loads.request(Slot.STARS, STARS, decode, this::upload);
+		}
+	}
+
+	/**
+	 * Drops the texture and any decode still on its way, and lets a folder that could not be read be tried
+	 * again. Call while the context is still alive.
+	 */
 	void free()
 	{
+		loads.clear(Slot.STARS);
+		failed = false;
 		if (stars != null)
 		{
 			glDeleteTextures(stars.texture);
 			stars = null;
 		}
+	}
+
+	/** Forgets a folder that could not be read, so it gets another attempt. Call on the client thread. */
+	void retryFailed()
+	{
+		failed = false;
 	}
 
 	/** Whether the pixels have landed; until they do, neither sky may sample the star map. */
@@ -95,13 +127,15 @@ class StarMap
 		glUniformMatrix3fv(uniStarRot, false, rot);
 	}
 
-	/** Client thread: null pixels mean the folder could not be read, which asks again on the next frame. */
+	/** Client thread: null pixels mean the folder could not be read, and it is not asked for again. */
 	private void upload(Faces faces)
 	{
-		if (faces != null)
+		if (faces == null)
 		{
-			stars = CubemapLoader.upload(faces, TEXTURE_UNIT);
+			failed = true;
+			return;
 		}
+		stars = CubemapLoader.upload(faces, TEXTURE_UNIT);
 	}
 
 	/**
