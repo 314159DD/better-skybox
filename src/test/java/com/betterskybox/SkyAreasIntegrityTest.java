@@ -27,13 +27,14 @@ package com.betterskybox;
 import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-/** The bundled sky_areas.json must only name skies that ship in the jar and only carry well-formed rows. */
+/** The bundled sky_areas.json must only name skies the sky pack ships and only carry well-formed rows. */
 public class SkyAreasIntegrityTest
 {
 	private static final Pattern RGB = Pattern.compile("#[0-9a-fA-F]{6}");
@@ -50,22 +51,23 @@ public class SkyAreasIntegrityTest
 	}
 
 	@Test
-	public void everySkyIsBundled() throws IOException
+	public void everySkyIsInTheSkyPack() throws IOException
 	{
+		Set<String> pack = ResourceIntegrityTest.skyPack();
 		for (SkyAreas.Area a : bundled())
 		{
-			assertSkyBundled(a.name, "sky", a.sky);
-			assertSkyBundled(a.name, "skyDawn", a.skyDawn);
-			assertSkyBundled(a.name, "skyDusk", a.skyDusk);
-			assertSkyBundled(a.name, "skyNight", a.skyNight);
+			assertInPack(pack, a.name, "sky", a.sky);
+			assertInPack(pack, a.name, "skyDawn", a.skyDawn);
+			assertInPack(pack, a.name, "skyDusk", a.skyDusk);
+			assertInPack(pack, a.name, "skyNight", a.skyNight);
 		}
 	}
 
-	private static void assertSkyBundled(String area, String field, String sky)
+	private static void assertInPack(Set<String> pack, String area, String field, String sky)
 	{
 		if (sky != null)
 		{
-			assertTrue(area + "." + field + " = " + sky, ResourceIntegrityTest.cubemapBundled(sky));
+			assertTrue(area + "." + field + " = " + sky, pack.contains(sky));
 		}
 	}
 

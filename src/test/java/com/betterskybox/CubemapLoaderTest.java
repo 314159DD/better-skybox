@@ -24,8 +24,10 @@
  */
 package com.betterskybox;
 
+import java.io.File;
 import org.junit.Test;
 import com.betterskybox.CubemapLoader.Faces;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -61,5 +63,19 @@ public class CubemapLoaderTest
 	public void aMissingFolderDecodesToNull()
 	{
 		assertNull(CubemapLoader.decode("no-such-sky"));
+	}
+
+	@Test
+	public void theSkyPackIsSearchedBeforeAHandMadeFolder()
+	{
+		assertArrayEquals(new File[]{CubemapLoader.PACK_DIR, CubemapLoader.CUSTOM_DIR}, CubemapLoader.SEARCH_DIRS);
+	}
+
+	@Test
+	public void theSkyPackLivesInOneFolderUnderTheCustomOne()
+	{
+		assertEquals(CubemapLoader.CUSTOM_DIR, CubemapLoader.PACK_DIR.getParentFile());
+		assertEquals("pack", CubemapLoader.PACK_DIR.getName());
+		assertEquals(CubemapLoader.PACK_DIR, CubemapLoader.PACK_MARKER.getParentFile());
 	}
 }

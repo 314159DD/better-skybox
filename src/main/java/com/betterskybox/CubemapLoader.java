@@ -36,8 +36,10 @@ import net.runelite.client.RuneLite;
 import static org.lwjgl.opengl.GL33C.*;
 
 /**
- * Loads a cubemap by folder name. Faces are looked up first in ~/.runelite/better-skybox/&lt;name&gt;/ and then in the
- * bundled resources under skybox/&lt;name&gt;/, as six px nx py ny pz nz .png files or one 4x2 skybox.png atlas.
+ * Loads a cubemap by folder name, as six px nx py ny pz nz .png files or one 4x2 skybox.png atlas. Faces are
+ * looked up in the downloaded sky pack ~/.runelite/better-skybox/pack/&lt;name&gt;/, then in a hand-made
+ * ~/.runelite/better-skybox/&lt;name&gt;/, then in the bundled resources under skybox/&lt;name&gt;/, which hold
+ * the debug sky and nothing else: the 21 skies and the star map are 35 MB and ship in the pack.
  * <p>
  * The load has two halves: {@link #decode} is pure CPU and runs off the client thread, {@link #upload} is nothing
  * but GL and runs on it.
@@ -46,7 +48,17 @@ import static org.lwjgl.opengl.GL33C.*;
 final class CubemapLoader
 {
 	private static final String[] FACES = {"px", "nx", "py", "ny", "pz", "nz"};
-	private static final File CUSTOM_DIR = new File(RuneLite.RUNELITE_DIR, "better-skybox");
+	/** Hand-made sky folders, one per name. */
+	static final File CUSTOM_DIR = new File(RuneLite.RUNELITE_DIR, "better-skybox");
+	/** Where the sky pack unpacks to, so removing it is deleting one folder. */
+	static final File PACK_DIR = new File(CUSTOM_DIR, "pack");
+	/** Written once an extraction has been verified; its absence is what "not installed" means. */
+	static final File PACK_MARKER = new File(PACK_DIR, ".complete");
+	/**
+	 * Folders searched for a face, in order, before the jar: the pack first, so a sky it ships is the one the
+	 * area table and the config enum name, whatever else is on disk.
+	 */
+	static final File[] SEARCH_DIRS = {PACK_DIR, CUSTOM_DIR};
 
 	static class Cubemap
 	{
@@ -77,6 +89,12 @@ final class CubemapLoader
 
 	private CubemapLoader()
 	{
+	}
+
+	/** Whether the sky pack is on disk. Without it only the debug sky loads, and only the procedural sky draws. */
+	static boolean packInstalled()
+	{
+		return PACK_MARKER.isFile();
 	}
 
 	/** Reads and decodes the six faces, or returns null when the images are missing, broken or mismatched. */
@@ -188,12 +206,16 @@ final class CubemapLoader
 
 	private static BufferedImage loadImage(String name, String file)
 	{
-		File custom = new File(new File(CUSTOM_DIR, name), file + ".png");
+		File onDisk = null;
 		try
 		{
-			if (custom.isFile())
+			for (File dir : SEARCH_DIRS)
 			{
-				return ImageIO.read(custom);
+				onDisk = new File(new File(dir, name), file + ".png");
+				if (onDisk.isFile())
+				{
+					return ImageIO.read(onDisk);
+				}
 			}
 			try (InputStream in = CubemapLoader.class.getResourceAsStream("skybox/" + name + "/" + file + ".png"))
 			{
@@ -202,7 +224,7 @@ final class CubemapLoader
 		}
 		catch (IOException ex)
 		{
-			log.warn("Failed to read cubemap image {}", custom, ex);
+			log.warn("Failed to read cubemap image {}", onDisk, ex);
 			return null;
 		}
 	}

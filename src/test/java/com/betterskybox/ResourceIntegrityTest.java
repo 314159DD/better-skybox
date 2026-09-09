@@ -25,10 +25,13 @@
 package com.betterskybox;
 
 import com.betterskybox.BetterSkyboxConfig.SkyboxTexture;
+import com.google.gson.Gson;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import org.junit.Test;
@@ -36,13 +39,32 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Every resource the renderers open at runtime must be in the jar. Lookups mirror the production code:
- * cubemaps relative to {@link CubemapLoader} the way {@code CubemapLoader.loadImage} does, shaders and their
- * quoted {@code #include}s relative to {@link BetterSkyboxPlugin} the way {@code Template.addInclude} does.
+ * Every resource the renderers open at runtime must be in the jar, and every sky they name must be in the sky
+ * pack. Lookups mirror the production code: cubemaps relative to {@link CubemapLoader} the way
+ * {@code CubemapLoader.loadImage} does, shaders and their quoted {@code #include}s relative to
+ * {@link BetterSkyboxPlugin} the way {@code Template.addInclude} does. The pack itself is a release asset and
+ * is not here to be read, so its folder names are checked against {@code sky_pack_manifest.json}, which
+ * {@code tools/build_sky_pack.py} writes from the folders it zipped.
  */
 public class ResourceIntegrityTest
 {
 	private static final String[] FACES = {"px", "nx", "py", "ny", "pz", "nz"};
+
+	/** The folder names the sky pack ships, as its build script recorded them. */
+	static Set<String> skyPack()
+	{
+		try (InputStream in = CubemapLoader.class.getResourceAsStream("sky_pack_manifest.json"))
+		{
+			assertNotNull("sky_pack_manifest.json", in);
+			Gson gson = new Gson();
+			String[] names = gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), String[].class);
+			return new HashSet<>(Arrays.asList(names));
+		}
+		catch (IOException ex)
+		{
+			throw new UncheckedIOException(ex);
+		}
+	}
 
 	/** True when {@code skybox/<name>/} ships either the atlas or all six faces. */
 	static boolean cubemapBundled(String name)
@@ -74,21 +96,29 @@ public class ResourceIntegrityTest
 	}
 
 	@Test
-	public void everySkyboxTextureIsBundled()
+	public void everySkyboxTextureIsInTheSkyPack()
 	{
+		Set<String> pack = skyPack();
 		for (SkyboxTexture texture : SkyboxTexture.values())
 		{
-			if (texture != SkyboxTexture.CUSTOM)
+			if (texture != SkyboxTexture.CUSTOM && texture != SkyboxTexture.DEBUG)
 			{
-				assertTrue(texture + " -> skybox/" + texture.dir, cubemapBundled(texture.dir));
+				assertTrue(texture + " -> " + texture.dir, pack.contains(texture.dir));
 			}
 		}
 	}
 
 	@Test
-	public void starMapIsBundled()
+	public void starMapIsInTheSkyPack()
 	{
-		assertTrue(cubemapBundled("stars"));
+		assertTrue(skyPack().contains("stars"));
+	}
+
+	/** The one cubemap still in the jar: DEBUG draws without the pack, and the loader test decodes it. */
+	@Test
+	public void debugSkyIsBundled()
+	{
+		assertTrue(cubemapBundled(SkyboxTexture.DEBUG.dir));
 	}
 
 	@Test
