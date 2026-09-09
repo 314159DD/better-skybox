@@ -5,7 +5,7 @@ Last wrap: 2026-09-09 late afternoon (crash recovery session)
 ## What this is
 RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, plus a sky pass
 (cubemap texture or procedural day/night sky). Loaded into the official launcher via
-`build/libs/gpu-skybox-agent.jar` (`-javaagent`, see README). Repo has ONE commit (initial).
+`build/libs/gpu-skybox-agent.jar` (`-javaagent`, see README).
 
 ## State
 1. DONE: cubemap sky (RS3 greenlands / magicblue / debug / custom folder), procedural sky with
@@ -25,7 +25,7 @@ RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, pl
    - 8 more CC0 cubemaps (5 ambientCG, 3 OpenGameArt stylised). Jar is 39 MB now.
    - CubemapLoader split out of SkyboxRenderer so both renderers share it.
    NOTHING of the day's work has been seen in-game yet.
-5. NEXT: none of sprint/sky-features-2 has been seen in-game yet. In-game checklist, in this order:
+5. DONE 2026-09-09: in-game checklist passed (Steven). Was:
    (a) Time of day = CYCLE, Cycle length 1, in Lumbridge: dawn, day, sunset and night cubemaps all cycle
    inside one minute. (b) walk into the Wilderness at level 30+: lightning flashes start within 22 s.
    (c) Sky type = PROCEDURAL, walk into Canifis: dusk regardless of the Time of day setting (area mood).
@@ -42,6 +42,8 @@ RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, pl
    In-game checklist passed, branch merged into master (ff, a8108b5). Distribution decision: RuneLite Plugin Hub as "Better Skybox" (name "Skybox" is taken by a flat-colour plugin); next sprint = hub-ready. Themed AI skies are still off the table (Blockade Labs
    declined); Spacescape (MIT), Kenney stylised sets and an ambientCG sweep remain open candidates for a
    later round.
+7. NEXT: Plugin Hub road. Plan: plan/2026-09-09-hub-ready.md (4 sprints hub-1..hub-4 + the page). Review with all
+   findings: .superpowers/sdd/hub-ready-review.md. Start with hub-1 (packaging). RS3 rips already dropped (5d35239).
 
 ## Gotchas
 - Compile with `./gradlew agentJar --offline -q` (7 s). Restart the client to pick up the jar.
