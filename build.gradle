@@ -24,6 +24,7 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
 	testImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
+	testImplementation 'junit:junit:4.13.2'
 }
 
 group = 'com.gpuskybox'
@@ -32,6 +33,10 @@ version = '0.1.0'
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
 	options.release.set(11)
+}
+
+tasks.named('test') {
+	useJUnit()
 }
 
 tasks.register('run', JavaExec) {
