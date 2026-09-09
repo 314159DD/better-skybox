@@ -43,7 +43,16 @@ until Steven flips it). Loaded into the official launcher via `build/libs/better
    In-game checklist passed, branch merged into master (ff, a8108b5). Distribution decision: RuneLite Plugin Hub as "Better Skybox" (name "Skybox" is taken by a flat-colour plugin); next sprint = hub-ready. Themed AI skies are still off the table (Blockade Labs
    declined); Spacescape (MIT), Kenney stylised sets and an ambientCG sweep remain open candidates for a
    later round.
-7. NEXT: Plugin Hub road. Plan: plan/2026-09-09-hub-ready.md (4 sprints hub-1..hub-4 + the page). Review with all
+7. DONE 2026-09-09 evening (branch sprint/hub-ready, 6 SDD tasks): rename to Better Skybox + com.betterskybox, agent in
+   its own source set, LICENSE/NOTICE, SkyPass split (plugin diff vs upstream 25 lines) + tools/sync_upstream.py,
+   11 correctness fixes, async cubemap decode, GPU settings import (16 keys, once), 62 tests, README/CONTRIBUTING,
+   icon + banner. GitHub: 314159DD/better-skybox (PRIVATE, no AI attribution anywhere, keep it that way; old repo
+   better-skybox-old to delete).
+8. NEXT: Steven's E2E acceptance on the sprint jar (settings import once, no stall at borders, custom-folder chat
+   message, sun 5 degrees higher after M1). Then final review + fix wave, rename the on-disk folder to better-skybox
+   (launcher settings.json follows), merge to master, flip public, Discord size question, hub PR
+   (.superpowers/sdd/hub-ready/submission-drafts.md).
+   Earlier plan note: Plugin Hub road. Plan: plan/2026-09-09-hub-ready.md (4 sprints hub-1..hub-4 + the page). Review with all
    findings: .superpowers/sdd/hub-ready-review.md. Start with hub-1 (packaging). RS3 rips already dropped (5d35239).
 
 ## Gotchas
