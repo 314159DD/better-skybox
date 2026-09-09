@@ -92,7 +92,12 @@ class SkyPass
 	private StarMap starMap;
 
 	private final SkyAreas skyAreas = new SkyAreas();
-	private final SkyClock skyClock = new SkyClock();
+	/**
+	 * Built in {@link #init}, not on injection: the sky day of the CYCLE preset starts when the plugin is
+	 * enabled, so turning it off and on again restarts the cycle at dawn instead of somewhere in the middle of
+	 * a day that began when the client did.
+	 */
+	private SkyClock skyClock;
 	private final Lightning lightning = new Lightning(new Random());
 	private final BorderBlend borderBlend = new BorderBlend();
 
@@ -110,6 +115,7 @@ class SkyPass
 
 	void init(Template template)
 	{
+		skyClock = new SkyClock();
 		// after the plugin's own sync mode and thread setup, so the ConfigChanged events land on a live context
 		GpuSettingsImport.run(configManager);
 		loads.start();
