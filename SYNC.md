@@ -104,7 +104,8 @@ what changes is where it sits in the panel.
   plugin's.
 - Every upstream item gains `section = rendererSection` (or `fogSection` for `fogDepth`) and a renumbered
   `position`, so the stock settings collapse into one section above the sky sections.
-- Five `@ConfigSection` constants, three enums and about 40 sky `@ConfigItem`s are appended.
+- Five `@ConfigSection` constants, four enums (`SkyMode`, `SkyboxTexture`, `SkyPreset`, `FogColorMode`) and
+  about 40 sky `@ConfigItem`s are appended.
 
 Upstream config changes conflict on the section and position lines every time. That is the price of keeping
 the panel readable; the alternative (a `GpuRendererConfig` base interface that Better Skybox extends) loses
@@ -113,6 +114,6 @@ the collapsible Renderer group.
 ## Not covered by the check
 
 Files this plugin owns outright. They have no upstream counterpart and `--apply` never touches them:
-`SkyPass`, `SkyboxRenderer`, `ProceduralSkyRenderer`, `CubemapLoader`, `SkyAreas`, `SkyClock`, `Lightning`,
-`BorderBlend`, the `sky_*.glsl` shaders, `sky_areas.json`, `sky_gradient.json` and the bundled cubemaps under
-`skybox/`.
+`SkyPass`, `SkyboxRenderer`, `ProceduralSkyRenderer`, `StarMap`, `CubemapLoader`, `CubemapLoads`, `SkyAreas`,
+`SkyClock`, `Lightning`, `BorderBlend`, `GpuSettingsImport`, the `sky_*.glsl` shaders, `sky_areas.json`,
+`sky_gradient.json` and the bundled cubemaps under `skybox/`.

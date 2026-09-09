@@ -19,11 +19,11 @@ and stars that follow the time of day. It is not 117 HD; the game looks exactly 
 plugin, and only the sky is different. Turn it on and the GPU plugin turns itself off, and your GPU settings are
 carried over, so nothing else about your client changes.
 
-## Why the download is 35 MB
+## Why the download is about 36 MB
 
 The jar bundles 21 CC0 skies in full quality (13 from Poly Haven, 5 from ambientCG, 3 stylised ones from
 OpenGameArt) plus NASA's Deep Star Map for the procedural night sky. That is where the size goes. RuneLite
-downloads a plugin once and keeps it, so you pay the 35 MB one time, not on every start.
+downloads a plugin once and keeps it, so you pay the download once, not on every start.
 
 ## Settings
 
@@ -74,14 +74,14 @@ in the Sky section and open the matching section below it.
 | Fog tint | 15 | share of the fog colour mixed into the whole sky |
 | Sky brightness | 100 | multiplier in percent |
 
-On first start the plugin copies your stock GPU plugin settings (draw distance, anti-aliasing, FPS settings and
-the rest, 16 in all) into its Renderer section, once. After that the two plugins keep separate settings, so a
-change in one does not touch the other.
+On first start the plugin copies your stock GPU plugin settings once, 16 in all: 15 of them (draw distance,
+anti-aliasing, FPS settings and the rest) into its Renderer section, and fog depth into Fog and blending. After
+that the two plugins keep separate settings, so a change in one does not touch the other.
 
 ## Area skies
 
 With Sky by area on, the sky and the fog colour follow where you are. The area table comes from 117 HD's
-`areas.json` and `environments.json`: 162 areas, 75 with a sky of their own, every one with 117 HD's fog colour,
+`areas.json` and `environments.json`: 162 areas, 75 with a sky of their own and 141 with 117 HD's fog colour,
 which Fog colour = AUTO uses. Morytania is overcast, the Wilderness is storm clouds, the Kharidian desert is a
 clear hard blue, the Fremennik province has mountain air and its northern isles a snow sky, Tirannwn is misty,
 and the kingdoms of Misthalin, Asgarnia and Kandarin each get a day sky of their own.

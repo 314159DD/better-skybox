@@ -51,9 +51,10 @@ reflection in `premain`, which is what the Gradle test runner does too, minus th
 
 - `src/main/java/com/betterskybox/`: the renamed copy of `net.runelite.client.plugins.gpu` (see the next
   section), plus the sky itself: `SkyPass` (the hook the plugin calls; init, per-frame decisions, area lookup,
-  cubemap selection), `SkyboxRenderer` (cubemap cache and crossfade), `ProceduralSkyRenderer` (gradient sky and
-  star map), `CubemapLoader` (decode and upload halves) and `CubemapLoads` (the loader thread), `SkyAreas` (the
-  area table), `SkyClock` (time of day and moon), `Lightning`, `BorderBlend`, `GpuSettingsImport`.
+  cubemap selection), `SkyboxRenderer` (cubemap cache and crossfade), `ProceduralSkyRenderer` (gradient sky),
+  `StarMap` (the NASA star map both skies share), `CubemapLoader` (decode and upload halves) and `CubemapLoads`
+  (the loader thread), `SkyAreas` (the area table), `SkyClock` (time of day and moon), `Lightning`,
+  `BorderBlend`, `GpuSettingsImport`.
 - `src/main/resources/com/betterskybox/`: the GPU shaders, `sky_vert.glsl`, `sky_frag.glsl`,
   `proc_sky_frag.glsl`, `sky_gradient.json`, `sky_areas.json`, and the bundled cubemaps under `skybox/<name>/`.
 - `src/agent/java/`: the launcher agent, excluded from the hub jar.
@@ -132,12 +133,16 @@ the horizon. Poly Haven and ambientCG both require a `User-Agent` header (the sc
 
 ## Tests
 
-`gradlew test` runs the JUnit 4 suite (62 tests at the time of writing). They are all pure Java: no GL context,
+`gradlew test` runs the JUnit 4 suite (85 tests at the time of writing). They are all pure Java: no GL context,
 no client, so they run on CI. The seams that make that possible are worth knowing before you add to them:
 
 - `CubemapLoads.start(ExecutorService, Consumer<Runnable>)` takes a test executor (`QueuedExecutor`) and a
   list standing in for the client thread, and `SkyboxRenderer(Loader, CubemapLoads)` takes a decode/upload stub,
-  so the async load order, the supersede rule and the failed set are tested without threads or GL.
+  so the async load order, the per-slot supersede rule and the failed set are tested without threads or GL.
+- `StarMap(CubemapLoads, Supplier<Faces>)` takes a stand-in decode, so the load lifecycle is tested without
+  reading the 9.6 MB bundled folder.
+- `GpuSettingsImport.run(BiFunction, Writer)` takes a reader and a writer that carry the config group, so the
+  marker and the read-only treatment of group `gpu` are tested without a `ConfigManager`.
 - `SkyAreas.bundled(gson)` reads the jar copy of the area table, ignoring a `~/.runelite/better-skybox/`
   override on the developer's machine.
 - `SkyClock(LongSupplier)` takes an injected clock for the CYCLE tests.
@@ -146,6 +151,6 @@ no client, so they run on CI. The seams that make that possible are worth knowin
   `getKey().equals("...")` literal in the plugin and `SkyPass` a declared key.
 - `ResourceIntegrityTest` and `SkyAreasIntegrityTest` prove every bundled folder and every area entry resolves.
 
-What cannot be unit tested and needs a run in game: the shaders, the GL upload, the star map load, the feel of a
-border crossing and the settings import against a real profile. The in-game checklist for a release is in
-`HANDOFF.md`.
+What cannot be unit tested and needs a run in game: the shaders, the GL upload, the star map on screen, the
+feel of a border crossing and the settings import against a real profile. The in-game checklist for a release
+is in `HANDOFF.md`.
