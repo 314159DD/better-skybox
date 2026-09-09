@@ -29,26 +29,38 @@ import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
 import com.betterskybox.CubemapLoader.Cubemap;
+import com.betterskybox.CubemapLoader.Faces;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class SkyboxRendererTest
 {
-	/** A loader that records every attempt and fails for names starting with "bad". */
 	private static SkyboxRenderer renderer(List<String> attempts)
 	{
-		return new SkyboxRenderer((name, unit) ->
+		return new SkyboxRenderer(loader(attempts));
+	}
+
+	/** A loader that records every decode, fails for names starting with "bad" and touches no GL. */
+	static SkyboxRenderer.Loader loader(List<String> decoded)
+	{
+		return new SkyboxRenderer.Loader()
 		{
-			attempts.add(name);
-			if (name.startsWith("bad"))
+			@Override
+			public Faces decode(String name)
 			{
-				return null;
+				decoded.add(name);
+				return name.startsWith("bad") ? null : new Faces(name, 1, new int[6][1], 0x112233);
 			}
-			Cubemap cubemap = new Cubemap();
-			cubemap.horizonColor = 0x112233;
-			return cubemap;
-		});
+
+			@Override
+			public Cubemap upload(Faces faces, int textureUnit)
+			{
+				Cubemap cubemap = new Cubemap();
+				cubemap.horizonColor = faces.horizonColor;
+				return cubemap;
+			}
+		};
 	}
 
 	@Test

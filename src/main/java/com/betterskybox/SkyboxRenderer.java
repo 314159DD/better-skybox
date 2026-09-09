@@ -31,6 +31,7 @@ import java.util.Set;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import com.betterskybox.CubemapLoader.Cubemap;
+import com.betterskybox.CubemapLoader.Faces;
 import com.betterskybox.template.Template;
 import static org.lwjgl.opengl.GL33C.*;
 
@@ -48,11 +49,32 @@ class SkyboxRenderer
 	static final int TEXTURE_UNIT = 2;
 	static final int PREV_TEXTURE_UNIT = 3;
 
-	/** Decodes and uploads a cubemap folder; {@link CubemapLoader#upload} in the client, a stub in tests. */
+	/**
+	 * The two halves of a cubemap load: {@code decode} is pure CPU and touches no GL, {@code upload} is nothing
+	 * but GL. {@link CubemapLoader} in the client, a stub in tests.
+	 */
 	interface Loader
 	{
-		Cubemap upload(String name, int textureUnit);
+		/** Null when the folder is missing or unreadable. */
+		Faces decode(String name);
+
+		Cubemap upload(Faces faces, int textureUnit);
 	}
+
+	private static final Loader CUBEMAP_LOADER = new Loader()
+	{
+		@Override
+		public Faces decode(String name)
+		{
+			return CubemapLoader.decode(name);
+		}
+
+		@Override
+		public Cubemap upload(Faces faces, int textureUnit)
+		{
+			return CubemapLoader.upload(faces, textureUnit);
+		}
+	};
 
 	private final Loader loader;
 	private int program;
@@ -81,7 +103,7 @@ class SkyboxRenderer
 	@Inject
 	SkyboxRenderer()
 	{
-		this(CubemapLoader::upload);
+		this(CUBEMAP_LOADER);
 	}
 
 	SkyboxRenderer(Loader loader)
@@ -124,23 +146,31 @@ class SkyboxRenderer
 		Cubemap next = loaded.get(name);
 		if (next == null)
 		{
-			next = loader.upload(name, TEXTURE_UNIT);
-			if (next == null)
+			Faces faces = loader.decode(name);
+			if (faces == null)
 			{
 				failed.add(name);
 				return false;
 			}
+			next = loader.upload(faces, TEXTURE_UNIT);
 			loaded.put(name, next);
 		}
-		if (next != current)
-		{
-			previous = current;
-			current = next;
-			fadeStartNanos = System.nanoTime();
-			this.fadeSeconds = previous == null ? 0 : fadeSeconds;
-			blendOverride = -1f;
-		}
+		show(next, fadeSeconds);
 		return true;
+	}
+
+	/** Puts {@code next} on screen, crossfading from whatever was showing. */
+	private void show(Cubemap next, float fadeSeconds)
+	{
+		if (next == current)
+		{
+			return;
+		}
+		previous = current;
+		current = next;
+		fadeStartNanos = System.nanoTime();
+		this.fadeSeconds = previous == null ? 0 : fadeSeconds;
+		blendOverride = -1f;
 	}
 
 	/** Drive the crossfade from outside (border blending); pass -1 to go back to the time-based fade. */

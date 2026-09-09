@@ -24,6 +24,7 @@
  */
 package com.betterskybox;
 
+import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.io.File;
@@ -37,6 +38,9 @@ import static org.lwjgl.opengl.GL33C.*;
 /**
  * Loads a cubemap by folder name. Faces are looked up first in ~/.runelite/better-skybox/&lt;name&gt;/ and then in the
  * bundled resources under skybox/&lt;name&gt;/, as six px nx py ny pz nz .png files or one 4x2 skybox.png atlas.
+ * <p>
+ * The load has two halves: {@link #decode} is pure CPU and runs off the client thread, {@link #upload} is nothing
+ * but GL and runs on it.
  */
 @Slf4j
 final class CubemapLoader
@@ -51,30 +55,67 @@ final class CubemapLoader
 		int horizonColor;
 	}
 
+	/** One decoded cubemap, ready to upload. Holds no GL handle, so it can be built on any thread. */
+	static final class Faces
+	{
+		final String name;
+		/** Width and height of every face; cubemap faces must be square and all the same size. */
+		final int size;
+		/** px nx py ny pz nz, each {@code size * size} pixels packed 0xAARRGGBB. */
+		final int[][] pixels;
+		/** Average colour of the horizon band of the side faces, packed 0xRRGGBB. */
+		final int horizonColor;
+
+		Faces(String name, int size, int[][] pixels, int horizonColor)
+		{
+			this.name = name;
+			this.size = size;
+			this.pixels = pixels;
+			this.horizonColor = horizonColor;
+		}
+	}
+
 	private CubemapLoader()
 	{
 	}
 
-	/** Uploads the cubemap on the given texture unit, or returns null when the images are missing or broken. */
-	static Cubemap upload(String name, int textureUnit)
+	/** Reads and decodes the six faces, or returns null when the images are missing, broken or mismatched. */
+	static Faces decode(String name)
 	{
-		BufferedImage[] faces = loadFaces(name);
-		if (faces == null)
+		BufferedImage[] images = loadFaces(name);
+		if (images == null)
 		{
 			return null;
 		}
 
+		int size = images[0].getWidth();
+		int[][] pixels = new int[6][];
+		for (int i = 0; i < 6; i++)
+		{
+			BufferedImage face = images[i];
+			if (face.getWidth() != size || face.getHeight() != size)
+			{
+				log.warn("Cubemap '{}' face {} is {}x{}, expected {}x{}", name, FACES[i], face.getWidth(),
+					face.getHeight(), size, size);
+				return null;
+			}
+			pixels[i] = toIntArgb(face, size);
+		}
+		return new Faces(name, size, pixels, averageHorizonColor(pixels, size));
+	}
+
+	/** Uploads decoded faces on the given texture unit. Client thread only. */
+	static Cubemap upload(Faces faces, int textureUnit)
+	{
 		Cubemap cubemap = new Cubemap();
-		cubemap.horizonColor = averageHorizonColor(faces);
+		cubemap.horizonColor = faces.horizonColor;
 		cubemap.texture = glGenTextures();
 		glActiveTexture(GL_TEXTURE0 + textureUnit);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap.texture);
 		for (int i = 0; i < 6; i++)
 		{
-			BufferedImage face = toIntArgb(faces[i]);
-			int[] pixels = ((DataBufferInt) face.getRaster().getDataBuffer()).getData();
-			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA8, face.getWidth(), face.getHeight(), 0,
-				GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA8, faces.size, faces.size, 0,
+				GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, faces.pixels[i]);
 		}
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -84,28 +125,25 @@ final class CubemapLoader
 		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 		glActiveTexture(GL_TEXTURE0);
 
-		log.info("Loaded cubemap '{}' ({}x{} per face)", name, faces[0].getWidth(), faces[0].getHeight());
+		log.info("Loaded cubemap '{}' ({}x{} per face)", faces.name, faces.size, faces.size);
 		return cubemap;
 	}
 
-	private static int averageHorizonColor(BufferedImage[] faces)
+	/** Mean of the 4 percent band around the middle of the four side faces, packed 0xRRGGBB. */
+	private static int averageHorizonColor(int[][] pixels, int size)
 	{
 		long r = 0, g = 0, b = 0, n = 0;
 		for (int i : new int[]{0, 1, 4, 5}) // px, nx, pz, nz: the side faces
 		{
-			BufferedImage face = faces[i];
-			int y0 = (int) (face.getHeight() * 0.48);
-			int y1 = (int) (face.getHeight() * 0.52);
-			for (int y = y0; y < y1; y++)
+			int[] face = pixels[i];
+			int end = (int) (size * 0.52) * size;
+			for (int p = (int) (size * 0.48) * size; p < end; p++)
 			{
-				for (int x = 0; x < face.getWidth(); x++)
-				{
-					int rgb = face.getRGB(x, y);
-					r += rgb >> 16 & 0xFF;
-					g += rgb >> 8 & 0xFF;
-					b += rgb & 0xFF;
-					n++;
-				}
+				int argb = face[p];
+				r += argb >> 16 & 0xFF;
+				g += argb >> 8 & 0xFF;
+				b += argb & 0xFF;
+				n++;
 			}
 		}
 		return (int) (r / n) << 16 | (int) (g / n) << 8 | (int) (b / n);
@@ -120,7 +158,7 @@ final class CubemapLoader
 		if (atlas != null)
 		{
 			int face = atlas.getWidth() / 4;
-			if (atlas.getHeight() < face * 2)
+			if (face == 0 || atlas.getHeight() < face * 2)
 			{
 				log.warn("Cubemap '{}' atlas is {}x{}, expected 4x2 faces", name, atlas.getWidth(), atlas.getHeight());
 				return null;
@@ -169,14 +207,13 @@ final class CubemapLoader
 		}
 	}
 
-	private static BufferedImage toIntArgb(BufferedImage src)
+	/** Copies into a fresh buffer: an atlas subimage shares its parent's raster, which GL must not see. */
+	private static int[] toIntArgb(BufferedImage src, int size)
 	{
-		if (src.getType() == BufferedImage.TYPE_INT_ARGB)
-		{
-			return src;
-		}
-		BufferedImage dst = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_ARGB);
-		dst.getGraphics().drawImage(src, 0, 0, null);
-		return dst;
+		BufferedImage dst = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+		Graphics graphics = dst.getGraphics();
+		graphics.drawImage(src, 0, 0, null);
+		graphics.dispose();
+		return ((DataBufferInt) dst.getRaster().getDataBuffer()).getData();
 	}
 }

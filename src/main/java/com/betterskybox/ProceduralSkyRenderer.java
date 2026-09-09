@@ -32,6 +32,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import com.betterskybox.CubemapLoader.Cubemap;
+import com.betterskybox.CubemapLoader.Faces;
 import com.betterskybox.BetterSkyboxConfig.SkyPreset;
 import com.betterskybox.template.Template;
 import static org.lwjgl.opengl.GL33C.*;
@@ -153,7 +154,8 @@ class ProceduralSkyRenderer
 		}
 		if (load)
 		{
-			stars = CubemapLoader.upload("stars", STAR_TEXTURE_UNIT);
+			Faces faces = CubemapLoader.decode("stars");
+			stars = faces == null ? null : CubemapLoader.upload(faces, STAR_TEXTURE_UNIT);
 		}
 		else
 		{
