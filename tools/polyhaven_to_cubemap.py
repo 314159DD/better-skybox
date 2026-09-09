@@ -3,7 +3,7 @@
 Usage:
   python tools/polyhaven_to_cubemap.py <polyhaven_asset> [...]      download CC0 tonemapped JPGs from Poly Haven
   python tools/polyhaven_to_cubemap.py --file <panorama> --name <n>  convert a local 2:1 panorama (image gen output)
-  add --custom to write to ~/.runelite/gpu-skybox/<name>/ instead of the bundled resources
+  add --custom to write to ~/.runelite/better-skybox/<name>/ instead of the bundled resources
 
 Writes <out>/<name>/{px,nx,py,ny,pz,nz}.png (512x512). Face convention is the standard GL cubemap
 layout, matching sky_frag.glsl (sample direction y up).
@@ -18,10 +18,10 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(ROOT, "ref", "polyhaven")
-BUNDLED = os.path.join(ROOT, "src", "main", "resources", "com", "gpuskybox", "skybox")
-CUSTOM = os.path.join(os.path.expanduser("~"), ".runelite", "gpu-skybox")
+BUNDLED = os.path.join(ROOT, "src", "main", "resources", "com", "betterskybox", "skybox")
+CUSTOM = os.path.join(os.path.expanduser("~"), ".runelite", "better-skybox")
 FACE = 512
-UA = {"User-Agent": "gpu-skybox/0.1 (RuneLite plugin, github.com/314159DD)"}
+UA = {"User-Agent": "better-skybox/0.1 (RuneLite plugin, github.com/314159DD)"}
 Image.MAX_IMAGE_PIXELS = None
 
 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     ap.add_argument("assets", nargs="*", help="Poly Haven asset names")
     ap.add_argument("--file", help="local equirectangular panorama instead of a Poly Haven asset")
     ap.add_argument("--name", help="folder name for --file")
-    ap.add_argument("--custom", action="store_true", help="write to ~/.runelite/gpu-skybox/ instead of the resources")
+    ap.add_argument("--custom", action="store_true", help="write to ~/.runelite/better-skybox/ instead of the resources")
     args = ap.parse_args()
     out_root = CUSTOM if args.custom else BUNDLED
     if args.file:

@@ -14,7 +14,7 @@ import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HD = os.path.join(ROOT, "ref", "117hd")
-OUT = os.path.join(ROOT, "src", "main", "resources", "com", "gpuskybox", "sky_areas.json")
+OUT = os.path.join(ROOT, "src", "main", "resources", "com", "betterskybox", "sky_areas.json")
 
 SNOW = "snow_field_puresky"
 MOUNTAIN = "drakensberg_solitary_mountain_puresky"
@@ -92,7 +92,7 @@ DUSK_THEMES = {
 DAWN_THEMES = {
     "Misthalin": "qwantani_dawn_puresky", "Asgarnia": "qwantani_dawn_puresky", "Kandarin": "ambientcg_morningskyhdri013b",
 }
-# procedural preset forced per area (GpuSkyboxConfig.SkyPreset names)
+# procedural preset forced per area (BetterSkyboxConfig.SkyPreset names)
 PRESETS = {
     "MORYTANIA": "DUSK", "VER_SINHAZA": "DUSK", "MEIYERDITCH": "DUSK", "BARROWS": "DUSK",
     "DARKMEYER": "BLOOD_MOON", "VAMPYRIUM": "BLOOD_MOON", "VAMPYRIUM_FOREST_INSTANCE": "BLOOD_MOON",

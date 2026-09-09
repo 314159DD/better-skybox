@@ -15,7 +15,7 @@ repositories {
 
 // Pin to the client version RuneLite currently ships; bump when the launcher updates.
 def runeLiteVersion = '1.12.38'
-def pluginMainClass = 'com.gpuskybox.GpuSkyboxPluginTest'
+def pluginMainClass = 'com.betterskybox.BetterSkyboxPluginTest'
 
 dependencies {
 	compileOnly group: 'net.runelite', name: 'client', version: runeLiteVersion
@@ -27,8 +27,16 @@ dependencies {
 	testImplementation 'junit:junit:4.13.2'
 }
 
-group = 'com.gpuskybox'
+group = 'com.betterskybox'
 version = '0.1.0'
+
+// The -javaagent launcher hook lives outside src/main so the hub's standard build (src/main only) never sees it.
+sourceSets {
+	agent {
+		java.srcDir 'src/agent/java'
+		compileClasspath += sourceSets.main.output + configurations.compileClasspath
+	}
+}
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
@@ -76,8 +84,9 @@ tasks.register('shadowJar', Jar) {
 // Plugin-only jar for the official launcher: add -javaagent:<path to this jar> to the launcher's JVM arguments.
 tasks.register('agentJar', Jar) {
 	from sourceSets.main.output
+	from sourceSets.agent.output
 	manifest {
-		attributes('Premain-Class': 'com.gpuskybox.Agent')
+		attributes('Premain-Class': 'com.betterskybox.Agent')
 	}
-	archiveFileName.set("gpu-skybox-agent.jar")
+	archiveFileName.set("better-skybox-agent.jar")
 }

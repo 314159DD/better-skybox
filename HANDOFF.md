@@ -1,11 +1,11 @@
-# gpu-skybox HANDOFF
+# Better Skybox HANDOFF
 
 Last wrap: 2026-09-09 late afternoon (crash recovery session)
 
 ## What this is
-RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, plus a sky pass
+RuneLite external plugin: the stock GPU renderer copied into `com.betterskybox`, plus a sky pass
 (cubemap texture or procedural day/night sky). Loaded into the official launcher via
-`build/libs/gpu-skybox-agent.jar` (`-javaagent`, see README).
+`build/libs/better-skybox-agent.jar` (`-javaagent`, see README).
 
 ## State
 1. DONE: cubemap sky (RS3 greenlands / magicblue / debug / custom folder), procedural sky with

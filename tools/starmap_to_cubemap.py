@@ -1,7 +1,7 @@
 """NASA Deep Star Maps 2020 (public domain, https://svs.gsfc.nasa.gov/4851) to the star cubemap the procedural sky samples.
 
 Usage: python tools/starmap_to_cubemap.py [ref/nasa/starmap_2020_8k.exr]
-Writes src/main/resources/com/gpuskybox/skybox/stars/{px..nz}.png, 1024x1024, sRGB.
+Writes src/main/resources/com/betterskybox/skybox/stars/{px..nz}.png, 1024x1024, sRGB.
 The EXR is linear 0..1; exposure and gamma below are tuned so the Milky Way band reads without blowing out the bright stars.
 
 Credit (required by NASA SVS): NASA/Goddard Space Flight Center Scientific Visualization Studio. Gaia DR2: ESA/Gaia/DPAC.
