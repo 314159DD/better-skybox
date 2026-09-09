@@ -109,8 +109,9 @@ shows that ground below the horizon.
 
 ## Updating the client version
 
-`build.gradle` pins `runeLiteVersion`. When RuneLite updates, bump it and diff
-`ref/runelite/.../plugins/gpu` against `src/main/java/com/betterskybox` to pull in upstream renderer changes.
+`build.gradle` pins `runeLiteVersion`. The 33 files copied from RuneLite's GPU plugin are regenerated, never
+hand edited: `python tools/sync_upstream.py --check` proves the copy is upstream's, `--apply` pulls in a new
+client version. [SYNC.md](SYNC.md) has the pinned revision, the four rename rules and the intentional deltas.
 
 ## Credits
 
