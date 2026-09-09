@@ -148,7 +148,6 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 	private float flash;
 	private SkyAreas.Area currentArea;
 	private SkyAreas.Area previousArea;
-	private String lastAreaSky;
 	private WorldPoint lastWorld;
 	private final BorderBlend borderBlend = new BorderBlend();
 
@@ -1100,7 +1099,10 @@ public class GpuSkyboxPlugin extends Plugin implements DrawCallbacks
 		{
 			if (area == previousArea && borderBlend.active())
 			{
-				borderBlend.bounce();
+				if (world != null)
+				{
+					borderBlend.bounce(world.getX(), world.getY());
+				}
 			}
 			else if (world != null)
 			{

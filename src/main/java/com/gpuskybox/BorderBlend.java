@@ -2,27 +2,36 @@ package com.gpuskybox;
 
 /**
  * Blend progress for an area change, driven by how far the player has walked from the tile where the
- * border was crossed. Stepping back across the same border reverses the blend instead of restarting it.
+ * border was crossed. Stepping back over a border re-anchors at the player's tile and carries the blend
+ * value over, so there is never a pop and the blend always finishes within {@code radiusTiles} of walking.
  */
 class BorderBlend
 {
 	private boolean active;
-	private boolean reversed;
-	private int crossX;
-	private int crossY;
+	private int anchorX;
+	private int anchorY;
+	private float start;
+	private float last = 1f;
 
+	/** A new border was crossed at this tile: blend from 0. */
 	void cross(int x, int y)
 	{
-		active = true;
-		reversed = false;
-		crossX = x;
-		crossY = y;
+		anchor(x, y, 0f);
 	}
 
-	/** The player stepped back over the border just crossed: keep the crossing tile, flip direction. */
-	void bounce()
+	/** The player stepped back into the previous area: the renderer swapped the skies, so continue from 1 - last. */
+	void bounce(int x, int y)
 	{
-		reversed = !reversed;
+		anchor(x, y, 1f - last);
+	}
+
+	private void anchor(int x, int y, float startProgress)
+	{
+		active = true;
+		anchorX = x;
+		anchorY = y;
+		start = startProgress;
+		last = startProgress;
 	}
 
 	boolean active()
@@ -37,21 +46,11 @@ class BorderBlend
 		{
 			return 1f;
 		}
-		if (radiusTiles <= 0)
-		{
-			active = false;
-			return 1f;
-		}
-		double dist = Math.hypot(x - crossX, y - crossY);
-		float t = (float) Math.min(1.0, dist / radiusTiles);
-		if (reversed)
-		{
-			t = 1f - t;
-		}
+		float t = radiusTiles <= 0 ? 1f : (float) Math.min(1.0, start + Math.hypot(x - anchorX, y - anchorY) / radiusTiles);
+		last = t;
 		if (t >= 1f)
 		{
 			active = false;
-			return 1f;
 		}
 		return t;
 	}

@@ -21,15 +21,17 @@ public class BorderBlendTest
 	}
 
 	@Test
-	public void bouncingBackReversesInsteadOfRestarting()
+	public void bouncingBackContinuesFromTheCurrentValue()
 	{
 		BorderBlend b = new BorderBlend();
 		b.cross(100, 100);
 		assertEquals(0.25f, b.progress(102, 100, 8), 1e-6f);
-		b.bounce();
-		// now 2 tiles from the crossing means 2 tiles back INTO the old area: 1 - 0.25
+		// the renderer swapped skies, so the value toward the now-current sky is 0.75, anchored where the player stands
+		b.bounce(102, 100);
 		assertEquals(0.75f, b.progress(102, 100, 8), 1e-6f);
-		assertEquals(1f, b.progress(100, 100, 8), 1e-6f);
+		// two more tiles in any direction finish it, no pop, no dependence on the original crossing tile
+		assertEquals(1f, b.progress(102, 102, 8), 1e-6f);
+		assertFalse(b.active());
 	}
 
 	@Test
@@ -38,5 +40,6 @@ public class BorderBlendTest
 		BorderBlend b = new BorderBlend();
 		b.cross(0, 0);
 		assertEquals(1f, b.progress(0, 0, 0), 1e-6f);
+		assertFalse(b.active());
 	}
 }
