@@ -86,6 +86,9 @@ class SkyPass
 	@Inject
 	private ProceduralSkyRenderer proceduralSky;
 
+	@Inject
+	private StarMap starMap;
+
 	private final SkyAreas skyAreas = new SkyAreas();
 	private final SkyClock skyClock = new SkyClock();
 	private final Lightning lightning = new Lightning(new Random());
@@ -139,6 +142,7 @@ class SkyPass
 		skyboxRenderer.freeTextures();
 		skyboxRenderer.shutdownProgram();
 		proceduralSky.shutdownProgram();
+		starMap.free();
 	}
 
 	/**
@@ -148,7 +152,7 @@ class SkyPass
 	 */
 	boolean beginFrame(Scene scene)
 	{
-		proceduralSky.starMap(config.skyboxEnabled() && procedural() && config.starMap());
+		starMap.want(config.skyboxEnabled() && procedural() && config.starMap() && proceduralSky.isReady());
 		if (config.skyboxEnabled())
 		{
 			updateArea();
@@ -217,7 +221,7 @@ class SkyPass
 		Mat4.mul(skyProj, Mat4.rotateY(cameraYaw));
 		if (procedural())
 		{
-			proceduralSky.draw(skyProj, fog, quadVao, config, skyClock, flash);
+			proceduralSky.draw(skyProj, fog, quadVao, config, skyClock, flash, starMap);
 		}
 		else
 		{

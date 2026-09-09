@@ -30,10 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
-import com.betterskybox.CubemapLoader.Cubemap;
-import com.betterskybox.CubemapLoader.Faces;
 import com.betterskybox.BetterSkyboxConfig.SkyPreset;
 import com.betterskybox.template.Template;
 import static org.lwjgl.opengl.GL33C.*;
@@ -48,12 +45,6 @@ class ProceduralSkyRenderer
 	static final Shader PROGRAM = new Shader()
 		.add(GL_VERTEX_SHADER, "sky_vert.glsl")
 		.add(GL_FRAGMENT_SHADER, "proc_sky_frag.glsl");
-
-	static final int STAR_TEXTURE_UNIT = 4;
-	/** Folder of the bundled star map cubemap. */
-	private static final String STARS = "stars";
-	/** Tilt of the celestial pole towards the horizon; puts the Milky Way in an arc instead of a ring. */
-	private static final double POLE_TILT = Math.toRadians(40);
 
 	private static final float[] BLOOD_MOON_COLOR = rgb(0xED3D3D);
 	private static final float[] MOON_COLOR = rgb(0xE1E5FF);
@@ -74,13 +65,8 @@ class ProceduralSkyRenderer
 		Keyframe[] sunGlow;
 	}
 
-	@Inject
-	private CubemapLoads loads;
-
 	private Gradient gradient;
 	private int program;
-	private Cubemap stars;
-	private final float[] starRot = new float[9];
 	private float hour = 12;
 
 	private int uniSkyProj, uniZenith, uniHorizon, uniSun, uniSunDir, uniMoonDir, uniMoonColor, uniMoonVisibility,
@@ -162,40 +148,8 @@ class ProceduralSkyRenderer
 
 	void shutdownProgram()
 	{
-		starMap(false);
 		glDeleteProgram(program);
 		program = 0;
-	}
-
-	/**
-	 * Asks for the 9.6 MB star map on the first frame it is wanted and frees it on the first frame it is not, so
-	 * a cubemap-only session never decodes it and no frame waits for the decode. Call every frame, on the client
-	 * thread.
-	 */
-	void starMap(boolean wanted)
-	{
-		if (wanted && program != 0)
-		{
-			if (stars == null)
-			{
-				loads.request(STARS, () -> CubemapLoader.decode(STARS), this::uploadStarMap);
-			}
-			return;
-		}
-		if (stars != null)
-		{
-			glDeleteTextures(stars.texture);
-			stars = null;
-		}
-	}
-
-	/** Client thread: null pixels mean the folder could not be read, which asks again on the next frame. */
-	private void uploadStarMap(Faces faces)
-	{
-		if (faces != null)
-		{
-			stars = CubemapLoader.upload(faces, STAR_TEXTURE_UNIT);
-		}
 	}
 
 	boolean isReady()
@@ -235,7 +189,6 @@ class ProceduralSkyRenderer
 				altitude = preset.altitude;
 				azimuth = preset.azimuth;
 		}
-		starRotation(hour, starRot);
 		direction(sunDir, altitude, azimuth);
 
 		if (preset == SkyPreset.BLOOD_MOON)
@@ -259,34 +212,14 @@ class ProceduralSkyRenderer
 		evaluate(gradient.sunGlow, altitude, sunGlow);
 	}
 
-	/**
-	 * Column-major 3x3 that takes a world-space view direction (y down) to a star map lookup: flip to y up, turn the
-	 * sky once per day around the celestial pole, then tilt that pole towards the horizon.
-	 */
-	private static void starRotation(float hour, float[] out)
-	{
-		double a = hour / 24 * 2 * Math.PI;
-		double ca = Math.cos(a), sa = Math.sin(a);
-		double ct = Math.cos(POLE_TILT), st = Math.sin(POLE_TILT);
-		// M = Rx(tilt) * Ry(a) * diag(1, -1, 1); columns are M applied to the unit axes
-		out[0] = (float) ca;
-		out[1] = (float) (st * sa);
-		out[2] = (float) (-ct * sa);
-		out[3] = 0;
-		out[4] = (float) -ct;
-		out[5] = (float) -st;
-		out[6] = (float) sa;
-		out[7] = (float) (-st * ca);
-		out[8] = (float) (ct * ca);
-	}
-
 	/** Horizon colour of the current sky as 0xRRGGBB, for fog. */
 	int getHorizonColor()
 	{
 		return Math.round(horizon[0] * 255) << 16 | Math.round(horizon[1] * 255) << 8 | Math.round(horizon[2] * 255);
 	}
 
-	void draw(float[] skyProj, int fog, int quadVao, BetterSkyboxConfig config, SkyClock clock, float flash)
+	void draw(float[] skyProj, int fog, int quadVao, BetterSkyboxConfig config, SkyClock clock, float flash,
+		StarMap starMap)
 	{
 		float seconds = clock.elapsedSeconds();
 
@@ -320,15 +253,12 @@ class ProceduralSkyRenderer
 		glUniform1f(uniFogTint, config.skyboxFogTint() / 100f);
 		glUniform1f(uniBrightness, config.skyboxBrightness() / 100f);
 		glUniform1f(uniFlash, flash);
-		// loaded only while the star map setting is on, see starMap()
-		boolean starMap = stars != null;
-		glUniform1f(uniStarMapEnabled, starMap ? 1f : 0f);
-		if (starMap)
+		// loaded only while the star map setting is on, see StarMap.want()
+		boolean stars = starMap.loaded();
+		glUniform1f(uniStarMapEnabled, stars ? 1f : 0f);
+		if (stars)
 		{
-			glActiveTexture(GL_TEXTURE0 + STAR_TEXTURE_UNIT);
-			glBindTexture(GL_TEXTURE_CUBE_MAP, stars.texture);
-			glUniform1i(uniStarMap, STAR_TEXTURE_UNIT);
-			glUniformMatrix3fv(uniStarRot, false, starRot);
+			starMap.bind(uniStarMap, uniStarRot, hour);
 		}
 
 		glBindVertexArray(quadVao);
