@@ -45,6 +45,45 @@ RENAMED = {
 # Files whose hooks live in a patch instead of in the copy.
 PATCHED = ["BetterSkyboxPlugin.java", "BetterSkyboxConfig.java"]
 
+# Every file this script owns, repo-relative and pinned: without the list, a copy deleted from src/ or an
+# upstream file added by a client bump would simply drop out of the walk and --check would still say clean.
+# Edit it deliberately when a bump adds or removes a file, and say so in SYNC.md.
+COPIED = [
+    "src/main/java/com/betterskybox/BetterSkyboxConfig.java",
+    "src/main/java/com/betterskybox/BetterSkyboxPlugin.java",
+    "src/main/java/com/betterskybox/GLBuffer.java",
+    "src/main/java/com/betterskybox/GpuFloatBuffer.java",
+    "src/main/java/com/betterskybox/GpuIntBuffer.java",
+    "src/main/java/com/betterskybox/Mat4.java",
+    "src/main/java/com/betterskybox/ModelUploader.java",
+    "src/main/java/com/betterskybox/RegionManager.java",
+    "src/main/java/com/betterskybox/SceneUploader.java",
+    "src/main/java/com/betterskybox/Shader.java",
+    "src/main/java/com/betterskybox/ShaderException.java",
+    "src/main/java/com/betterskybox/TextureManager.java",
+    "src/main/java/com/betterskybox/VAO.java",
+    "src/main/java/com/betterskybox/VBO.java",
+    "src/main/java/com/betterskybox/Zone.java",
+    "src/main/java/com/betterskybox/config/AntiAliasingMode.java",
+    "src/main/java/com/betterskybox/config/ColorBlindMode.java",
+    "src/main/java/com/betterskybox/config/UIScalingMode.java",
+    "src/main/java/com/betterskybox/regions/Region.java",
+    "src/main/java/com/betterskybox/regions/Regions.java",
+    "src/main/java/com/betterskybox/template/Template.java",
+    "src/main/resources/com/betterskybox/colorblind.glsl",
+    "src/main/resources/com/betterskybox/frag.glsl",
+    "src/main/resources/com/betterskybox/fragui.glsl",
+    "src/main/resources/com/betterskybox/hsl_to_rgb.glsl",
+    "src/main/resources/com/betterskybox/regions/regions.txt",
+    "src/main/resources/com/betterskybox/scale/bicubic.glsl",
+    "src/main/resources/com/betterskybox/scale/hybrid.glsl",
+    "src/main/resources/com/betterskybox/scale/xbr_lv2_common.glsl",
+    "src/main/resources/com/betterskybox/scale/xbr_lv2_frag.glsl",
+    "src/main/resources/com/betterskybox/scale/xbr_lv2_vert.glsl",
+    "src/main/resources/com/betterskybox/vert.glsl",
+    "src/main/resources/com/betterskybox/vertui.glsl",
+]
+
 PATCH_DIR = "patches"
 
 
@@ -69,7 +108,12 @@ def rename(text):
 
 
 def pairs(upstream):
-    """(upstream absolute path, our repo-relative path) for every copied file, plus the ones we skip."""
+    """(upstream absolute path, our repo-relative path) for every file in COPIED, plus the upstream names we skip.
+
+    Exits when the two sides disagree: a file in COPIED that upstream no longer has, or one that is no longer
+    in src/. Both are the cases a bare walk used to pass over in silence.
+    """
+    expected = set(COPIED)
     copied = []
     skipped = []
     for src_dir, dst_dir, keep in (
@@ -83,15 +127,28 @@ def pairs(upstream):
             dirnames.sort()
             for name in sorted(filenames):
                 rel = os.path.relpath(os.path.join(dirpath, name), root)
+                theirs = os.path.join(src_dir, rel).replace(os.sep, "/")
                 if not keep(name):
-                    skipped.append(os.path.join(src_dir, rel).replace(os.sep, "/"))
+                    skipped.append(theirs)
                     continue
-                ours = os.path.join(dst_dir, os.path.dirname(rel), RENAMED.get(name, name))
+                ours = os.path.join(dst_dir, os.path.dirname(rel), RENAMED.get(name, name)).replace(os.sep, "/")
+                if ours not in expected:
+                    skipped.append(theirs)
+                    continue
                 if not os.path.isfile(os.path.join(REPO, ours)):
-                    skipped.append(os.path.join(src_dir, rel).replace(os.sep, "/"))
-                    continue
-                copied.append((os.path.join(dirpath, name), ours.replace(os.sep, "/")))
+                    sys.exit("%s is copied from %s but missing from src/" % (ours, theirs))
+                copied.append((os.path.join(dirpath, name), ours))
+    gone = sorted(expected - {ours for _, ours in copied})
+    if gone:
+        sys.exit("no upstream counterpart for %d copied file(s):\n    %s" % (len(gone), "\n    ".join(gone)))
     return copied, skipped
+
+
+def report_skipped(skipped):
+    """Names, not just a count: an upstream file we do not copy is what a client bump adds."""
+    print("%d copied files checked, %d upstream files not copied" % (len(COPIED), len(skipped)))
+    for name in skipped:
+        print("    not copied: %s" % name)
 
 
 def git(args, cwd, ok=(0,)):
@@ -148,7 +205,7 @@ def check(upstream):
         sys.stdout.writelines(difflib.unified_diff(
             text.splitlines(True), current.splitlines(True),
             fromfile="upstream+patches/" + ours, tofile="src/" + ours))
-    print("%d copied files checked, %d upstream files not copied" % (len(generated), len(skipped)))
+    report_skipped(skipped)
     if drifted:
         print("DRIFT in %d file(s): %s" % (len(drifted), ", ".join(drifted)))
         return 1
@@ -166,6 +223,7 @@ def apply(upstream):
         write(path, text)
         changed += 1
         print("updated %s" % ours)
+    report_skipped(skipped)
     print("%d copied files, %d updated" % (len(generated), changed))
     return 0
 

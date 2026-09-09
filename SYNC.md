@@ -52,7 +52,10 @@ Bumping the client version:
 1. Check out the new RuneLite revision in `ref/runelite` and update the table above.
 2. `--apply`. If a patch fails to apply, upstream moved one of the hook sites: fix that one hunk by hand in
    `src/`, then `--update-patches`.
-3. `./gradlew clean test jar --offline` and a run in game.
+3. If the bump added or removed an upstream file, decide whether it is ours. The copied set is pinned in
+   `COPIED` in `tools/sync_upstream.py`: a file it lists that upstream no longer has fails the run, and one
+   upstream added shows up in the `not copied:` lines. Add or remove it there and update the list below.
+4. `./gradlew clean test jar --offline` and a run in game.
 
 ## What is copied
 
@@ -69,7 +72,9 @@ Bumping the client version:
   `scale/xbr_lv2_frag.glsl`, `scale/xbr_lv2_vert.glsl`, `regions/regions.txt`. The rename rules match nothing
   in them; they are byte copies.
 
-Upstream's `.clang-format` is not copied. `--check` reports it as "not copied" and does not fail on it.
+The 33 paths are pinned in `COPIED` in `tools/sync_upstream.py`, so a copy deleted from `src/` fails the run
+instead of dropping out of it. Upstream's `.clang-format` is not copied; `--check` names it under "not copied"
+and does not fail on it, and any upstream file a client bump adds shows up in the same place.
 
 ## Intentional deltas
 
