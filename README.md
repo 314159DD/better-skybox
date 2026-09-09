@@ -32,7 +32,8 @@ in the Sky section and open the matching section below it.
 - **Renderer** (closed by default): the stock GPU plugin's settings, draw distance to render threads. Filled from
   your GPU plugin settings the first time Better Skybox starts.
 - **Sky**: the switch, the sky type (cubemap or procedural), the time of day, overworld only, lightning.
-- **Cubemap sky**: which bundled sky to show, the dawn/dusk/night companions, sky by area, the fades.
+- **Cubemap sky**: which bundled sky to show, the dawn/dusk/night companions, the star map over night skies,
+  sky by area, the fades.
 - **Procedural sky** (closed by default): sun, moon, stars, clouds, night-sky extras, area moods.
 - **Fog and blending**: how the sky meets the terrain, for both sky types. Fog depth lives here too.
 
@@ -49,6 +50,8 @@ in the Sky section and open the matching section below it.
 | Custom cubemap folder | | folder name under `~/.runelite/better-skybox/` used when Cubemap = CUSTOM |
 | Sky by time | on | dawn, day, dusk and night cubemaps follow the Time of day; day is the Cubemap above or the area's own sky |
 | Dawn / Dusk / Night cubemap | DAWN / SUNSET / NIGHT | the other three phases, unless an area brings its own |
+| Star map on night skies | on | draw the NASA star map over the bundled night cubemaps and over any sky you picked as a night one, so the photo's blurry star blobs give way to real ones |
+| Night sky dimming | 50 | how far the photo sky is darkened where the star map is drawn, in percent |
 | Sky by area | on | sky and fog colour follow the map area you are in; unmapped areas use the Cubemap above |
 | Time fade | 4 | seconds to crossfade on a time-of-day or settings change |
 | Area fade | 8 | tiles to walk past an area border until the new sky is fully in; walking back reverses the blend |
@@ -124,7 +127,13 @@ GPU plugin.
 
 **What does it cost in performance?** One extra full-screen pass per frame for the sky. It is not noticeable
 next to the scene itself. Cubemaps are decoded on a background thread, and the 10 MB star map is only loaded
-while the procedural sky is on with Real star map enabled.
+while a sky that draws it is on screen.
+
+**Why do the night cubemaps have crisp stars now?** The bundled night skies are 512 px photo HDRIs, so their
+stars come out as soft blobs. With Star map on night skies the plugin dims that sky a little above the horizon
+and draws the same NASA Deep Star Map the procedural sky uses over it, turning with the time of day. It applies
+to NIGHT, MOONRISE and AURORA_NIGHT, to any area's own night sky, and to whatever you set as the Night cubemap,
+your own folders included. Turn it off, or take the dimming to 0, to get the plain photo back.
 
 **Why does the GPU plugin switch off when I turn this on?** RuneLite lets one plugin draw the scene at a time.
 Better Skybox contains the stock renderer, so nothing is lost; turn it off and the GPU plugin comes back.

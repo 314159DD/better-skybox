@@ -77,26 +77,26 @@ public class SkyboxRendererTest
 	{
 		SkyboxRenderer renderer = renderer();
 		// nothing is known to be bad on the frame that asks: the failure is only known once the decode lands
-		assertTrue(renderer.select("bad-area", 1f));
+		assertTrue(renderer.select("bad-area", 1f, false));
 		loaderThread.runAll();
-		assertTrue(renderer.select("bad-default", 1f));
+		assertTrue(renderer.select("bad-default", 1f, false));
 		loaderThread.runAll();
 		// an area sky and its fallback both missing must not thrash between the two every frame
-		assertFalse(renderer.select("bad-area", 1f));
-		assertFalse(renderer.select("bad-default", 1f));
+		assertFalse(renderer.select("bad-area", 1f, false));
+		assertFalse(renderer.select("bad-default", 1f, false));
 		assertEquals(Arrays.asList("bad-area", "bad-default"), decoded);
 
 		renderer.retryFailed();
-		assertTrue(renderer.select("bad-area", 1f));
+		assertTrue(renderer.select("bad-area", 1f, false));
 		loaderThread.runAll();
 		assertEquals(3, decoded.size());
-		assertFalse(renderer.select("bad-area", 1f));
+		assertFalse(renderer.select("bad-area", 1f, false));
 	}
 
 	@Test
 	public void emptyNameIsNeverLoaded()
 	{
-		assertFalse(renderer().select("", 1f));
+		assertFalse(renderer().select("", 1f, false));
 		loaderThread.runAll();
 		assertTrue(decoded.isEmpty());
 	}
@@ -105,11 +105,11 @@ public class SkyboxRendererTest
 	public void loadedCubemapsStayResident()
 	{
 		SkyboxRenderer renderer = renderer();
-		assertTrue(renderer.select("sky", 1f));
+		assertTrue(renderer.select("sky", 1f, false));
 		loaderThread.runAll();
-		assertTrue(renderer.select("other", 1f));
+		assertTrue(renderer.select("other", 1f, false));
 		loaderThread.runAll();
-		assertTrue(renderer.select("sky", 1f));
+		assertTrue(renderer.select("sky", 1f, false));
 		loaderThread.runAll();
 		assertEquals(Arrays.asList("sky", "other"), decoded);
 	}
@@ -119,8 +119,8 @@ public class SkyboxRendererTest
 	{
 		// two borders crossed before the first decode lands; the sky left behind is never uploaded
 		SkyboxRenderer renderer = renderer();
-		renderer.select("first", 1f);
-		renderer.select("second", 1f);
+		renderer.select("first", 1f, false);
+		renderer.select("second", 1f, false);
 		loaderThread.runAll();
 		assertEquals(Collections.singletonList("second"), uploaded);
 	}
@@ -130,11 +130,61 @@ public class SkyboxRendererTest
 	{
 		SkyboxRenderer renderer = renderer();
 		assertEquals(0xABCDEF, renderer.getHorizonColor(0xABCDEF));
-		renderer.select("sky", 1f);
+		renderer.select("sky", 1f, false);
 		// the frame does not wait for the decode: it draws on with the game colour
 		assertEquals(0xABCDEF, renderer.getHorizonColor(0xABCDEF));
 		loaderThread.runAll();
 		assertEquals(0x112233, renderer.getHorizonColor(0xABCDEF));
+	}
+
+	@Test
+	public void aDaySkyAsksForNoStars()
+	{
+		SkyboxRenderer renderer = renderer();
+		renderer.select("sky", 1f, false);
+		loaderThread.runAll();
+		assertEquals(0f, renderer.starAmount(), 0f);
+	}
+
+	@Test
+	public void starsComeInWithTheCrossfadeToANightSky()
+	{
+		SkyboxRenderer renderer = renderer();
+		renderer.select("day", 10f, false);
+		loaderThread.runAll();
+		renderer.select("night", 10f, true);
+		loaderThread.runAll();
+
+		// the border blend drives the same crossfade the stars ride on
+		renderer.overrideBlend(0.25f);
+		assertEquals(0.25f, renderer.starAmount(), 1e-6f);
+		renderer.overrideBlend(1f);
+		assertEquals(1f, renderer.starAmount(), 1e-6f);
+	}
+
+	@Test
+	public void starsGoOutWithTheCrossfadeBackToDay()
+	{
+		SkyboxRenderer renderer = renderer();
+		renderer.select("night", 10f, true);
+		loaderThread.runAll();
+		renderer.select("day", 10f, false);
+		loaderThread.runAll();
+
+		renderer.overrideBlend(0.25f);
+		assertEquals(0.75f, renderer.starAmount(), 1e-6f);
+	}
+
+	@Test
+	public void theSameFolderCanBeADaySkyAndANightOne()
+	{
+		// an area whose night sky names the folder it already shows by day: nothing to fade, only the stars change
+		SkyboxRenderer renderer = renderer();
+		renderer.select("sky", 10f, false);
+		loaderThread.runAll();
+		renderer.select("sky", 10f, true);
+		assertEquals(1f, renderer.starAmount(), 0f);
+		assertEquals(Collections.singletonList("sky"), decoded);
 	}
 
 	@Test

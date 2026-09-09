@@ -171,7 +171,7 @@
  	)
  	default boolean removeVertexSnapping()
  	{
-@@ -236,11 +253,606 @@
+@@ -236,11 +253,639 @@
  		keyName = "numThreads",
  		name = "Threads",
  		description = "Number of render threads to use.",
@@ -240,13 +240,13 @@
 +		SUNSET("qwantani_sunset_puresky"),
 +		HAZY_SUNSET("industrial_sunset_puresky"),
 +		DUSK("qwantani_dusk_1_puresky"),
-+		MOONRISE("qwantani_moonrise_puresky"),
-+		NIGHT("qwantani_night_puresky"),
++		MOONRISE("qwantani_moonrise_puresky", true),
++		NIGHT("qwantani_night_puresky", true),
 +		STORM_BREAK("ambientcg_dayskyhdri060b"),
 +		DEEP_BLUE("ambientcg_dayskyhdri055b"),
 +		PALE_MORNING("ambientcg_morningskyhdri013b"),
 +		GOLDEN_HOUR("ambientcg_eveningskyhdri046b"),
-+		AURORA_NIGHT("ambientcg_nightskyhdri007"),
++		AURORA_NIGHT("ambientcg_nightskyhdri007", true),
 +		TOON_BLUE("oga_cloudy_blue"),
 +		TOON_SUNSET("oga_cloudy_sunset"),
 +		TOON_VIOLET("oga_cloudy_violet"),
@@ -256,10 +256,18 @@
 +
 +		/** Folder under {@code skybox/} in the jar; empty for CUSTOM, whose folder is the Custom cubemap folder setting. */
 +		final String dir;
++		/** A sky that is dark enough for the star map to be drawn over it. */
++		final boolean night;
 +
 +		SkyboxTexture(String dir)
 +		{
++			this(dir, false);
++		}
++
++		SkyboxTexture(String dir, boolean night)
++		{
 +			this.dir = dir;
++			this.night = night;
 +		}
 +	}
 +
@@ -389,6 +397,31 @@
 +	default SkyboxTexture skyboxNight()
 +	{
 +		return SkyboxTexture.NIGHT;
++	}
++
++	@ConfigItem(
++		keyName = "nightStars",
++		name = "Star map on night skies",
++		description = "Draw the NASA star map over the bundled night cubemaps (NIGHT, MOONRISE, AURORA_NIGHT) and over every area night sky. Brightness follows Star brightness in the Procedural section.",
++		position = 7,
++		section = cubemapSection
++	)
++	default boolean nightStars()
++	{
++		return true;
++	}
++
++	@Range(min = 0, max = 100)
++	@ConfigItem(
++		keyName = "nightStarsDim",
++		name = "Night sky dimming",
++		description = "How much the photo sky above the horizon is darkened when the star map is on, so its own blurry stars fade out.",
++		position = 8,
++		section = cubemapSection
++	)
++	default int nightStarsDim()
++	{
++		return 50;
 +	}
 +
 +	@ConfigItem(
@@ -532,7 +565,7 @@
 +	@ConfigItem(
 +		keyName = "starBrightness",
 +		name = "Star brightness",
-+		description = "Procedural sky: star intensity in percent.",
++		description = "Star intensity in percent, for the procedural stars and for the star map drawn over night cubemaps.",
 +		position = 9,
 +		section = proceduralSection
 +	)
@@ -720,7 +753,7 @@
 +		keyName = "skyboxRotation",
 +		name = "Rotation",
 +		description = "Cubemap: rotate the texture around the vertical axis, in degrees.",
-+		position = 10,
++		position = 12,
 +		section = cubemapSection
 +	)
 +	default int skyboxRotation()
@@ -733,7 +766,7 @@
 +		keyName = "skyboxRotationSpeed",
 +		name = "Drift speed",
 +		description = "Cubemap: slowly rotate the texture over time, in degrees per minute. 0 disables drift.",
-+		position = 11,
++		position = 13,
 +		section = cubemapSection
 +	)
 +	default int skyboxRotationSpeed()
@@ -745,7 +778,7 @@
 +		keyName = "skyboxByArea",
 +		name = "Sky by area",
 +		description = "Pick the sky and fog colour from the area you are in (Wilderness, Morytania, desert, ...). Areas come from 117 HD's tables via sky_areas.json, override with ~/.runelite/better-skybox/sky_areas.json. Unmapped areas use the Cubemap above.",
-+		position = 7,
++		position = 9,
 +		section = cubemapSection
 +	)
 +	default boolean skyboxByArea()
@@ -758,7 +791,7 @@
 +		keyName = "skyboxFadeSeconds",
 +		name = "Time fade",
 +		description = "Seconds to crossfade when the sky changes with the time of day or the config. 0 = instant.",
-+		position = 8,
++		position = 10,
 +		section = cubemapSection
 +	)
 +	default int skyboxFadeSeconds()
@@ -771,7 +804,7 @@
 +		keyName = "skyboxFadeTiles",
 +		name = "Area fade",
 +		description = "Tiles to walk past an area border before the new sky is fully in. Walking back swaps the skies and carries the blend over. 0 = instant.",
-+		position = 9,
++		position = 11,
 +		section = cubemapSection
 +	)
 +	default int skyboxFadeTiles()

@@ -27,9 +27,47 @@ package com.betterskybox;
 import org.junit.Test;
 import com.betterskybox.BetterSkyboxConfig.SkyboxTexture;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class SkyPassTest
 {
+	private static final SkyboxTexture[] TEXTURES = SkyboxTexture.values();
+
+	@Test
+	public void bundledNightSkiesCarryTheStarMap()
+	{
+		for (SkyboxTexture texture : new SkyboxTexture[]{SkyboxTexture.NIGHT, SkyboxTexture.MOONRISE,
+			SkyboxTexture.AURORA_NIGHT})
+		{
+			assertTrue(texture.name(), SkyPass.nightSky(texture.dir, false, TEXTURES));
+		}
+	}
+
+	@Test
+	public void bundledDaySkiesDoNot()
+	{
+		for (SkyboxTexture texture : TEXTURES)
+		{
+			assertEquals(texture.name(), texture.night, SkyPass.nightSky(texture.dir, false, TEXTURES));
+		}
+	}
+
+	@Test
+	public void aFolderChosenAsANightSkyCarriesTheStarMap()
+	{
+		// a custom folder, or a bundled day sky set as the Night cubemap: the player said it is a night sky
+		assertTrue(SkyPass.nightSky("my-own-sky", true, TEXTURES));
+		assertTrue(SkyPass.nightSky(SkyboxTexture.CLEAR.dir, true, TEXTURES));
+	}
+
+	@Test
+	public void anUnknownFolderIsADaySkyByItself()
+	{
+		// the folder name says nothing about what is in it, so an area's day sky gets no stars
+		assertFalse(SkyPass.nightSky("my-own-sky", false, TEXTURES));
+	}
+
 	@Test
 	public void customFallbackIsTheConfiguredSky()
 	{

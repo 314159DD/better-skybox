@@ -58,6 +58,8 @@ class SkyPass
 	private static final int TELEPORT_TILES = 8;
 	/** Drawn when a CUSTOM folder cannot be loaded and the Cubemap setting is CUSTOM too. */
 	static final BetterSkyboxConfig.SkyboxTexture DEFAULT_SKY = BetterSkyboxConfig.SkyboxTexture.PARTLY_CLOUDY;
+	/** Held once: {@link BetterSkyboxConfig.SkyboxTexture#values()} clones the array on every call. */
+	private static final BetterSkyboxConfig.SkyboxTexture[] TEXTURES = BetterSkyboxConfig.SkyboxTexture.values();
 
 	@Inject
 	private Client client;
@@ -152,7 +154,6 @@ class SkyPass
 	 */
 	boolean beginFrame(Scene scene)
 	{
-		starMap.want(config.skyboxEnabled() && procedural() && config.starMap() && proceduralSky.isReady());
 		if (config.skyboxEnabled())
 		{
 			updateArea();
@@ -178,6 +179,9 @@ class SkyPass
 		}
 		// the crossfade moves exactly once per frame, after this frame's blend override has been set
 		skyboxRenderer.advanceFade();
+		starMap.want(config.skyboxEnabled() && (procedural()
+			? config.starMap() && proceduralSky.isReady()
+			: config.nightStars() && skyboxRenderer.wantsStars()));
 		boolean ready = procedural() ? proceduralSky.isReady() : skyboxRenderer.isReady();
 		boolean draw = config.skyboxEnabled()
 			&& ready
@@ -225,7 +229,7 @@ class SkyPass
 		}
 		else
 		{
-			skyboxRenderer.draw(skyProj, fog, quadVao, config, flash);
+			skyboxRenderer.draw(skyProj, fog, quadVao, config, skyClock, flash, starMap);
 		}
 
 		glUseProgram(restoreProgram);
@@ -285,10 +289,12 @@ class SkyPass
 	private void selectCubemap(SkyClock.Phase phase)
 	{
 		float fade = config.skyboxFadeSeconds();
+		boolean atNight = phase == SkyClock.Phase.NIGHT;
 		if (currentArea != null)
 		{
 			String areaSky = currentArea.skyFor(phase);
-			if (areaSky != null && skyboxRenderer.select(areaSky, fade))
+			boolean areaNight = atNight && currentArea.skyNight != null;
+			if (areaSky != null && skyboxRenderer.select(areaSky, fade, nightSky(areaSky, areaNight, TEXTURES)))
 			{
 				return;
 			}
@@ -310,16 +316,17 @@ class SkyPass
 		}
 		if (texture != BetterSkyboxConfig.SkyboxTexture.CUSTOM)
 		{
-			skyboxRenderer.select(texture.dir, fade);
+			skyboxRenderer.select(texture.dir, fade, nightSky(texture.dir, atNight, TEXTURES));
 			return;
 		}
 		String name = config.skyboxCustomName().trim();
-		if (skyboxRenderer.select(name, fade))
+		if (skyboxRenderer.select(name, fade, nightSky(name, atNight, TEXTURES)))
 		{
 			return;
 		}
+		// the fallback is the daytime Cubemap setting, so it is a night sky only if it is one by itself
 		BetterSkyboxConfig.SkyboxTexture fallback = customFallback(config.skyboxTexture());
-		skyboxRenderer.select(fallback.dir, fade);
+		skyboxRenderer.select(fallback.dir, fade, nightSky(fallback.dir, false, TEXTURES));
 		if (!name.equals(reportedCustomName))
 		{
 			reportedCustomName = name;
@@ -329,6 +336,28 @@ class SkyPass
 				.value("Better Skybox: " + reason + ", using " + fallback)
 				.build());
 		}
+	}
+
+	/**
+	 * Whether the star map belongs over the cubemap named {@code name}: it is one of the bundled skies marked
+	 * night, or the player picked it as a night sky themselves. {@code chosenAsNight} carries the second route,
+	 * which is either an area's own night sky or the Night cubemap setting; it is the only way a custom folder
+	 * or a bright bundled sky counts as night, since the folder name says nothing about what is in it.
+	 */
+	static boolean nightSky(String name, boolean chosenAsNight, BetterSkyboxConfig.SkyboxTexture[] nightTextures)
+	{
+		if (chosenAsNight)
+		{
+			return true;
+		}
+		for (BetterSkyboxConfig.SkyboxTexture texture : nightTextures)
+		{
+			if (texture.night && texture.dir.equals(name))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

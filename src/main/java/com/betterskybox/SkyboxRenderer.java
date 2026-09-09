@@ -83,6 +83,9 @@ class SkyboxRenderer
 	private final Set<String> failed = new HashSet<>();
 	private Cubemap current;
 	private Cubemap previous;
+	/** Whether each slot holds a night sky, so a day-to-night crossfade brings the stars in with it. */
+	private boolean currentNight;
+	private boolean previousNight;
 	private long fadeStartNanos;
 	private float fadeSeconds;
 	private float blendOverride = -1f;
@@ -98,6 +101,11 @@ class SkyboxRenderer
 	private int uniBrightness;
 	private int uniFlash;
 	private int uniRotation;
+	private int uniStarMap;
+	private int uniStarRot;
+	private int uniStarAmount;
+	private int uniStarBrightness;
+	private int uniStarDim;
 
 	private final long startNanos = System.nanoTime();
 
@@ -127,6 +135,11 @@ class SkyboxRenderer
 		uniBrightness = glGetUniformLocation(program, "brightness");
 		uniFlash = glGetUniformLocation(program, "flash");
 		uniRotation = glGetUniformLocation(program, "rotation");
+		uniStarMap = glGetUniformLocation(program, "starMap");
+		uniStarRot = glGetUniformLocation(program, "starRot");
+		uniStarAmount = glGetUniformLocation(program, "starAmount");
+		uniStarBrightness = glGetUniformLocation(program, "starBrightness");
+		uniStarDim = glGetUniformLocation(program, "starDim");
 	}
 
 	void shutdownProgram()
@@ -143,8 +156,10 @@ class SkyboxRenderer
 	 * <p>
 	 * Returns false only for a name that will never show and wants replacing: an empty one, or one that failed
 	 * to load and is skipped until {@link #retryFailed()}.
+	 *
+	 * @param night whether this sky is a night one, see {@link SkyPass#nightSky}
 	 */
-	boolean select(String name, float fadeSeconds)
+	boolean select(String name, float fadeSeconds, boolean night)
 	{
 		if (name.isEmpty() || failed.contains(name))
 		{
@@ -153,15 +168,15 @@ class SkyboxRenderer
 		Cubemap next = loaded.get(name);
 		if (next == null)
 		{
-			loads.request(name, () -> loader.decode(name), faces -> finish(name, faces, fadeSeconds));
+			loads.request(name, () -> loader.decode(name), faces -> finish(name, faces, fadeSeconds, night));
 			return true;
 		}
-		show(next, fadeSeconds);
+		show(next, fadeSeconds, night);
 		return true;
 	}
 
 	/** Client thread: uploads what the loader thread decoded, or remembers a name that cannot be loaded. */
-	private void finish(String name, Faces faces, float fadeSeconds)
+	private void finish(String name, Faces faces, float fadeSeconds, boolean night)
 	{
 		if (faces == null)
 		{
@@ -170,21 +185,23 @@ class SkyboxRenderer
 		}
 		Cubemap next = loader.upload(faces, TEXTURE_UNIT);
 		loaded.put(name, next);
-		show(next, fadeSeconds);
+		show(next, fadeSeconds, night);
 	}
 
 	/** Puts {@code next} on screen, crossfading from whatever was showing. */
-	private void show(Cubemap next, float fadeSeconds)
+	private void show(Cubemap next, float fadeSeconds, boolean night)
 	{
-		if (next == current)
+		if (next != current)
 		{
-			return;
+			previous = current;
+			previousNight = currentNight;
+			current = next;
+			fadeStartNanos = System.nanoTime();
+			this.fadeSeconds = previous == null ? 0 : fadeSeconds;
+			blendOverride = -1f;
 		}
-		previous = current;
-		current = next;
-		fadeStartNanos = System.nanoTime();
-		this.fadeSeconds = previous == null ? 0 : fadeSeconds;
-		blendOverride = -1f;
+		// the same folder can be reached as a day sky and as a night one, and then swaps without a fade
+		currentNight = night;
 	}
 
 	/** Drive the crossfade from outside (border blending); pass -1 to go back to the time-based fade. */
@@ -208,12 +225,31 @@ class SkyboxRenderer
 		loaded.clear();
 		current = null;
 		previous = null;
+		currentNight = false;
+		previousNight = false;
 		failed.clear();
 	}
 
 	boolean isReady()
 	{
 		return program != 0 && current != null;
+	}
+
+	/**
+	 * How much of the sky on screen is a night one, 0..1: the two slots' night flags mixed by the crossfade, so
+	 * walking from a day area into a night one brings the stars in at the pace of the sky behind them.
+	 */
+	float starAmount()
+	{
+		float prev = previousNight ? 1f : 0f;
+		float cur = currentNight ? 1f : 0f;
+		return prev + (cur - prev) * blend();
+	}
+
+	/** Whether the star map is worth loading: a night sky is showing, or fading in or out. */
+	boolean wantsStars()
+	{
+		return isReady() && starAmount() > 0f;
 	}
 
 	/**
@@ -278,11 +314,14 @@ class SkyboxRenderer
 	 * @param skyProj  projection * pitch * yaw, without camera translation
 	 * @param quadVao  a VAO whose attribute 0 is a fullscreen quad in clip space (-1..1), drawn as a 4-vertex fan
 	 */
-	void draw(float[] skyProj, int sky, int quadVao, BetterSkyboxConfig config, float flash)
+	void draw(float[] skyProj, int sky, int quadVao, BetterSkyboxConfig config, SkyClock clock, float flash,
+		StarMap starMap)
 	{
 		double elapsedMinutes = (System.nanoTime() - startNanos) / 60e9;
 		float rotationDeg = (float) ((config.skyboxRotation() + elapsedMinutes * config.skyboxRotationSpeed()) % 360.0);
 		float blend = blend();
+		// nothing to sample until the pixels land, and then the dimming must not run ahead of the stars either
+		float stars = starMap.loaded() ? starAmount() : 0f;
 
 		glDisable(GL_DEPTH_TEST);
 		glDepthMask(false);
@@ -304,6 +343,13 @@ class SkyboxRenderer
 		glUniform1f(uniBrightness, config.skyboxBrightness() / 100f);
 		glUniform1f(uniFlash, flash);
 		glUniform1f(uniRotation, (float) Math.toRadians(rotationDeg));
+		glUniform1f(uniStarAmount, stars);
+		glUniform1f(uniStarBrightness, config.starBrightness() / 100f);
+		glUniform1f(uniStarDim, config.nightStarsDim() / 100f);
+		if (stars > 0f)
+		{
+			starMap.bind(uniStarMap, uniStarRot, clock.hour(config));
+		}
 
 		glBindVertexArray(quadVao);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
