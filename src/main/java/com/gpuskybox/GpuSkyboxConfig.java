@@ -48,7 +48,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "drawDistance",
 		name = "Draw distance",
 		description = "Draw distance.",
-		position = 1
+		position = 1,
+		section = rendererSection
 	)
 	default int drawDistance()
 	{
@@ -59,7 +60,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "hideUnrelatedMaps",
 		name = "Hide unrelated maps",
 		description = "Hide unrelated map areas you shouldn't see.",
-		position = 2
+		position = 2,
+		section = rendererSection
 	)
 	default boolean hideUnrelatedMaps()
 	{
@@ -73,7 +75,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "expandedMapLoadingChunks",
 		name = "Extended map loading",
 		description = "Extra map area to load, in 8 tile chunks.",
-		position = 1
+		position = 3,
+		section = rendererSection
 	)
 	default int expandedMapLoadingZones()
 	{
@@ -84,7 +87,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "smoothBanding",
 		name = "Remove color banding",
 		description = "Smooths out the color banding that is present in the CPU renderer.",
-		position = 2
+		position = 4,
+		section = rendererSection
 	)
 	default boolean smoothBanding()
 	{
@@ -95,7 +99,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "antiAliasingMode",
 		name = "Anti aliasing",
 		description = "Configures the anti-aliasing mode.",
-		position = 3
+		position = 5,
+		section = rendererSection
 	)
 	default AntiAliasingMode antiAliasingMode()
 	{
@@ -106,7 +111,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "uiScalingMode",
 		name = "UI scaling mode",
 		description = "Sampling function to use for the UI in stretched mode.",
-		position = 4
+		position = 6,
+		section = rendererSection
 	)
 	default UIScalingMode uiScalingMode()
 	{
@@ -120,7 +126,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "fogDepth",
 		name = "Fog depth",
 		description = "Distance from the scene edge the fog starts.",
-		position = 5
+		position = 1,
+		section = fogSection
 	)
 	default int fogDepth()
 	{
@@ -135,7 +142,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "anisotropicFilteringLevel",
 		name = "Anisotropic filtering",
 		description = "Configures the anisotropic filtering level.",
-		position = 7
+		position = 7,
+		section = rendererSection
 	)
 	default int anisotropicFilteringLevel()
 	{
@@ -146,7 +154,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "colorBlindMode",
 		name = "Colorblindness correction",
 		description = "Adjusts colors to account for colorblindness.",
-		position = 8
+		position = 8,
+		section = rendererSection
 	)
 	default ColorBlindMode colorBlindMode()
 	{
@@ -161,7 +170,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "colorBlindIntensity",
 		name = "Colorblindness intensity",
 		description = "Strength of the colorblindness correction effect.",
-		position = 9
+		position = 9,
+		section = rendererSection
 	)
 	default int colorBlindIntensity()
 	{
@@ -172,7 +182,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "brightTextures",
 		name = "Bright textures",
 		description = "Use old texture lighting method which results in brighter game textures.",
-		position = 10
+		position = 10,
+		section = rendererSection
 	)
 	default boolean brightTextures()
 	{
@@ -183,7 +194,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "unlockFps",
 		name = "Unlock FPS",
 		description = "Removes the 50 FPS cap for camera movement.",
-		position = 11
+		position = 11,
+		section = rendererSection
 	)
 	default boolean unlockFps()
 	{
@@ -201,7 +213,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "vsyncMode",
 		name = "Vsync mode",
 		description = "Method to synchronize frame rate with refresh rate.",
-		position = 12
+		position = 12,
+		section = rendererSection
 	)
 	default SyncMode syncMode()
 	{
@@ -212,7 +225,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "fpsTarget",
 		name = "FPS target",
 		description = "Target FPS when 'Unlock FPS' is enabled and 'Vsync mode' is off.",
-		position = 13
+		position = 13,
+		section = rendererSection
 	)
 	@Range(
 		min = 1,
@@ -227,7 +241,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "removeVertexSnapping",
 		name = "Remove vertex snapping",
 		description = "Removes vertex snapping from most animations.",
-		position = 14
+		position = 14,
+		section = rendererSection
 	)
 	default boolean removeVertexSnapping()
 	{
@@ -238,7 +253,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "numThreads",
 		name = "Threads",
 		description = "Number of render threads to use.",
-		position = 20
+		position = 15,
+		section = rendererSection
 	)
 	@Range(min = 0, max = 15)
 	default int numThreads()
@@ -247,11 +263,41 @@ public interface GpuSkyboxConfig extends Config
 	}
 
 	@ConfigSection(
-		name = "Skybox",
-		description = "Sky drawn behind the scene: a cubemap texture or a procedural day/night sky",
+		name = "Renderer",
+		description = "The stock GPU plugin settings",
+		position = 10,
+		closedByDefault = true
+	)
+	String rendererSection = "renderer";
+
+	@ConfigSection(
+		name = "Sky",
+		description = "Which sky is drawn: a cubemap texture or a procedural day/night sky",
+		position = 20
+	)
+	String skySection = "sky";
+
+	@ConfigSection(
+		name = "Cubemap sky",
+		description = "Settings for Sky type = CUBEMAP",
 		position = 30
 	)
-	String skyboxSection = "skybox";
+	String cubemapSection = "cubemap";
+
+	@ConfigSection(
+		name = "Procedural sky",
+		description = "Settings for Sky type = PROCEDURAL",
+		position = 40,
+		closedByDefault = true
+	)
+	String proceduralSection = "procedural";
+
+	@ConfigSection(
+		name = "Fog and blending",
+		description = "How the sky meets the terrain, for both sky types",
+		position = 50
+	)
+	String fogSection = "fog";
 
 	enum SkyMode
 	{
@@ -330,8 +376,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxEnabled",
 		name = "Enable sky",
 		description = "Draw a sky instead of the flat fog colour.",
-		position = 31,
-		section = skyboxSection
+		position = 1,
+		section = skySection
 	)
 	default boolean skyboxEnabled()
 	{
@@ -342,8 +388,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyMode",
 		name = "Sky type",
 		description = "CUBEMAP: a texture. PROCEDURAL: gradient sky with sun, moon and stars (from 117 HD's day/night work).",
-		position = 32,
-		section = skyboxSection
+		position = 2,
+		section = skySection
 	)
 	default SkyMode skyMode()
 	{
@@ -354,8 +400,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxCubemap",
 		name = "Cubemap",
 		description = "Bundled cubemap (RS3 rips or Poly Haven CC0 skies), or CUSTOM to use the folder named below. With Sky by area on, this is the sky for unmapped areas.",
-		position = 33,
-		section = skyboxSection
+		position = 1,
+		section = cubemapSection
 	)
 	default SkyboxTexture skyboxTexture()
 	{
@@ -366,8 +412,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxCustomName",
 		name = "Custom cubemap folder",
 		description = "Folder name under ~/.runelite/gpu-skybox/ containing px, nx, py, ny, pz, nz .png, or a single skybox.png atlas (4x2 faces: px nz nx pz / py ny).",
-		position = 34,
-		section = skyboxSection
+		position = 2,
+		section = cubemapSection
 	)
 	default String skyboxCustomName()
 	{
@@ -378,8 +424,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyPreset",
 		name = "Time of day",
 		description = "Procedural sky only. Presets set the sun position. CLOCK follows your local time, CYCLE runs a full day in the minutes set below, CUSTOM uses the sliders.",
-		position = 35,
-		section = skyboxSection
+		position = 1,
+		section = proceduralSection
 	)
 	default SkyPreset skyPreset()
 	{
@@ -391,8 +437,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "sunAltitude",
 		name = "Sun altitude",
 		description = "Procedural sky, Time of day = CUSTOM. Degrees above the horizon, negative is night.",
-		position = 36,
-		section = skyboxSection
+		position = 3,
+		section = proceduralSection
 	)
 	default int sunAltitude()
 	{
@@ -404,8 +450,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "sunAzimuth",
 		name = "Sun azimuth",
 		description = "Procedural sky, Time of day = CUSTOM. Compass direction of the sun in degrees.",
-		position = 37,
-		section = skyboxSection
+		position = 4,
+		section = proceduralSection
 	)
 	default int sunAzimuth()
 	{
@@ -416,8 +462,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "moonEnabled",
 		name = "Moon",
 		description = "Procedural sky: draw the moon.",
-		position = 38,
-		section = skyboxSection
+		position = 6,
+		section = proceduralSection
 	)
 	default boolean moonEnabled()
 	{
@@ -428,8 +474,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "starsEnabled",
 		name = "Stars",
 		description = "Procedural sky: draw stars at night.",
-		position = 39,
-		section = skyboxSection
+		position = 9,
+		section = proceduralSection
 	)
 	default boolean starsEnabled()
 	{
@@ -440,8 +486,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "starMap",
 		name = "Real star map",
 		description = "Procedural sky: use NASA's Deep Star Map (Gaia DR2, 1.7 billion stars) turning with the time of day instead of generated stars.",
-		position = 44,
-		section = skyboxSection
+		position = 10,
+		section = proceduralSection
 	)
 	default boolean starMap()
 	{
@@ -453,8 +499,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "cycleMinutes",
 		name = "Cycle length",
 		description = "Procedural sky, Time of day = CYCLE. Real minutes for one full day.",
-		position = 40,
-		section = skyboxSection
+		position = 2,
+		section = proceduralSection
 	)
 	default int cycleMinutes()
 	{
@@ -465,8 +511,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "sunDisk",
 		name = "Sun disk",
 		description = "Procedural sky: draw the sun itself, not just its glow.",
-		position = 41,
-		section = skyboxSection
+		position = 5,
+		section = proceduralSection
 	)
 	default boolean sunDisk()
 	{
@@ -478,8 +524,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "moonSize",
 		name = "Moon size",
 		description = "Procedural sky: moon disk size in percent.",
-		position = 42,
-		section = skyboxSection
+		position = 7,
+		section = proceduralSection
 	)
 	default int moonSize()
 	{
@@ -491,8 +537,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "moonPhase",
 		name = "Moon phase",
 		description = "Procedural sky: 0 = new moon, 100 = full moon.",
-		position = 43,
-		section = skyboxSection
+		position = 8,
+		section = proceduralSection
 	)
 	default int moonPhase()
 	{
@@ -504,8 +550,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "starBrightness",
 		name = "Star brightness",
 		description = "Procedural sky: star intensity in percent.",
-		position = 45,
-		section = skyboxSection
+		position = 11,
+		section = proceduralSection
 	)
 	default int starBrightness()
 	{
@@ -516,8 +562,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "shootingStars",
 		name = "Shooting stars",
 		description = "Procedural sky: occasional meteors at night.",
-		position = 46,
-		section = skyboxSection
+		position = 12,
+		section = proceduralSection
 	)
 	default boolean shootingStars()
 	{
@@ -528,8 +574,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "nebula",
 		name = "Nebula",
 		description = "Procedural sky: faint coloured nebula clouds behind the stars.",
-		position = 47,
-		section = skyboxSection
+		position = 13,
+		section = proceduralSection
 	)
 	default boolean nebula()
 	{
@@ -540,8 +586,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "aurora",
 		name = "Aurora",
 		description = "Procedural sky: northern lights at night.",
-		position = 48,
-		section = skyboxSection
+		position = 14,
+		section = proceduralSection
 	)
 	default boolean aurora()
 	{
@@ -553,8 +599,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "cloudCover",
 		name = "Cloud cover",
 		description = "Procedural sky: how much of the sky is clouded, in percent. 0 = clear.",
-		position = 49,
-		section = skyboxSection
+		position = 15,
+		section = proceduralSection
 	)
 	default int cloudCover()
 	{
@@ -566,8 +612,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "cloudSpeed",
 		name = "Cloud speed",
 		description = "Procedural sky: cloud drift speed in percent. 0 = still.",
-		position = 50,
-		section = skyboxSection
+		position = 16,
+		section = proceduralSection
 	)
 	default int cloudSpeed()
 	{
@@ -578,8 +624,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxOverworldOnly",
 		name = "Overworld only",
 		description = "Only draw the sky in the overworld, keep the flat fog colour underground and in dungeons.",
-		position = 51,
-		section = skyboxSection
+		position = 3,
+		section = skySection
 	)
 	default boolean skyboxOverworldOnly()
 	{
@@ -590,8 +636,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "preferGameSkybox",
 		name = "Prefer game skybox",
 		description = "Where the game ships its own skybox model, draw that instead.",
-		position = 52,
-		section = skyboxSection
+		position = 4,
+		section = skySection
 	)
 	default boolean preferGameSkybox()
 	{
@@ -602,8 +648,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxFogColorMode",
 		name = "Fog colour",
 		description = "AUTO: the area's fog colour from 117 HD's environment table where one exists, else the game colour when set, else the sky. SKYBOX: the sky's horizon colour. GAME: the client's sky colour (needs the Skybox colour plugin, otherwise black). CUSTOM: the colour below. Fog depth 0 (above) turns terrain fog off, horizon blend 0 turns the sky fade off.",
-		position = 53,
-		section = skyboxSection
+		position = 2,
+		section = fogSection
 	)
 	default FogColorMode skyboxFogColorMode()
 	{
@@ -614,8 +660,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxFogCustomColor",
 		name = "Custom fog colour",
 		description = "Fog colour used when Fog colour is set to CUSTOM.",
-		position = 54,
-		section = skyboxSection
+		position = 3,
+		section = fogSection
 	)
 	default Color skyboxFogCustomColor()
 	{
@@ -627,8 +673,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxHorizonBlend",
 		name = "Horizon blend",
 		description = "How far above the horizon the fog colour fades into the sky. 0 = no fade.",
-		position = 55,
-		section = skyboxSection
+		position = 4,
+		section = fogSection
 	)
 	default int skyboxHorizonBlend()
 	{
@@ -640,8 +686,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxFogTint",
 		name = "Fog tint",
 		description = "How much of the fog colour is mixed into the whole sky.",
-		position = 56,
-		section = skyboxSection
+		position = 5,
+		section = fogSection
 	)
 	default int skyboxFogTint()
 	{
@@ -653,8 +699,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxBrightness",
 		name = "Sky brightness",
 		description = "Brightness multiplier for the sky, in percent.",
-		position = 57,
-		section = skyboxSection
+		position = 6,
+		section = fogSection
 	)
 	default int skyboxBrightness()
 	{
@@ -666,8 +712,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxRotation",
 		name = "Rotation",
 		description = "Cubemap: rotate the texture around the vertical axis, in degrees.",
-		position = 58,
-		section = skyboxSection
+		position = 5,
+		section = cubemapSection
 	)
 	default int skyboxRotation()
 	{
@@ -679,8 +725,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxRotationSpeed",
 		name = "Drift speed",
 		description = "Cubemap: slowly rotate the texture over time, in degrees per minute. 0 disables drift.",
-		position = 59,
-		section = skyboxSection
+		position = 6,
+		section = cubemapSection
 	)
 	default int skyboxRotationSpeed()
 	{
@@ -691,8 +737,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxByArea",
 		name = "Sky by area",
 		description = "Pick the sky and fog colour from the area you are in (Wilderness, Morytania, desert, ...). Areas come from 117 HD's tables via sky_areas.json, override with ~/.runelite/gpu-skybox/sky_areas.json. Unmapped areas use the Cubemap above.",
-		position = 60,
-		section = skyboxSection
+		position = 3,
+		section = cubemapSection
 	)
 	default boolean skyboxByArea()
 	{
@@ -704,8 +750,8 @@ public interface GpuSkyboxConfig extends Config
 		keyName = "skyboxFadeSeconds",
 		name = "Area fade",
 		description = "Cubemap: seconds to crossfade when the sky changes with the area. 0 = instant.",
-		position = 61,
-		section = skyboxSection
+		position = 4,
+		section = cubemapSection
 	)
 	default int skyboxFadeSeconds()
 	{

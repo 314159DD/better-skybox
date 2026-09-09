@@ -23,7 +23,12 @@ Rebuild with `gradlew agentJar` and restart the client to pick up changes. Delet
 
 `run.bat` starts a dev client from Gradle instead (no Jagex login on this machine, legacy login only).
 
-## Settings (plugin panel, section "Skybox")
+## Settings (plugin panel)
+
+Five collapsible sections: **Renderer** (the stock GPU settings, closed by default), **Sky** (enable, sky type,
+overworld only, prefer game skybox), **Cubemap sky**, **Procedural sky** (closed by default) and **Fog and blending**
+(applies to both types). RuneLite cannot grey out settings, so pick the Sky type in the Sky section and open the
+matching section below it.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
@@ -52,9 +57,9 @@ Rebuild with `gradlew agentJar` and restart the client to pick up changes. Delet
 | Sky by area | on | pick sky and fog colour from the map area; 147 areas from 117 HD's tables, 60 with their own sky |
 | Area fade | 4 | cubemap: crossfade seconds when the area sky changes, 0 = instant |
 
-Terrain fog itself is the stock "Fog depth" setting at the top of the panel; 0 turns it off.
+Terrain fog itself is "Fog depth" in the Fog and blending section; 0 turns it off.
 Draw distance, AA and the rest are the same as the stock GPU plugin but live in their own config group
-(`gpuskybox`), so set them again once.
+(`gpuskybox`) under Renderer, so set them again once.
 
 ## Sky by area
 

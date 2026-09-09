@@ -36,7 +36,7 @@ RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, pl
 - Compile with `./gradlew agentJar --offline -q` (7 s). Restart the client to pick up the jar.
 - `ref/` is gitignored: sparse RuneLite checkout + 117 HD PR 558/655 files, needed for diffs only.
 - `run.bat` dev client = legacy login only on this machine.
-- Config positions: procedural items 35-49, general sky items 51-59, area items 60-61.
+- Config panel: five sections (Renderer 10, Sky 20, Cubemap 30, Procedural 40, Fog 50), positions restart at 1 inside each. Keys unchanged.
 - Poly Haven and ambientCG APIs need a User-Agent header (403 otherwise); the scripts set one.
 - 117 HD regionBoxes are two CORNER region ids of a box, not an id range. Cost one wrong lookup pass.
 - EXR reading: cv2 with OPENCV_IO_ENABLE_OPENEXR=1 (set in starmap_to_cubemap.py); no OpenEXR package needed.
