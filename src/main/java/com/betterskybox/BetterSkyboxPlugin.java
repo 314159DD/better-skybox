@@ -38,7 +38,6 @@ import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import javax.inject.Inject;
@@ -52,7 +51,6 @@ import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
 import net.runelite.api.Model;
 import net.runelite.api.Perspective;
-import net.runelite.api.Player;
 import net.runelite.api.Projection;
 import net.runelite.api.Renderable;
 import net.runelite.api.Scene;
@@ -60,8 +58,6 @@ import net.runelite.api.TextureProvider;
 import net.runelite.api.TileObject;
 import net.runelite.api.WorldEntity;
 import net.runelite.api.WorldView;
-import net.runelite.api.coords.LocalPoint;
-import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.CommandExecuted;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.PostClientTick;
@@ -110,8 +106,6 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 	private static final int UNIFORM_BUFFER_SIZE = 5 * Float.BYTES;
 	private static final int NUM_ZONES = Constants.EXTENDED_SCENE_SIZE >> 3;
 	private static final int MAX_WORLDVIEWS = 4096;
-	/** A larger step between two frames than any walk or run is a teleport. */
-	private static final int TELEPORT_TILES = 8;
 
 	@Inject
 	private Client client;
@@ -141,22 +135,7 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 	private RenderCallbackManager renderCallbackManager;
 
 	@Inject
-	private SkyboxRenderer skyboxRenderer;
-
-	@Inject
-	private ProceduralSkyRenderer proceduralSky;
-	private final SkyAreas skyAreas = new SkyAreas();
-	private final SkyClock skyClock = new SkyClock();
-	private final Lightning lightning = new Lightning(new Random());
-	private float flash;
-	private SkyAreas.Area currentArea;
-	private SkyAreas.Area previousArea;
-	private WorldPoint lastWorld;
-	private SkyClock.Phase lastPhase;
-	private final BorderBlend borderBlend = new BorderBlend();
-
-	@Inject
-	private com.google.gson.Gson gson;
+	private SkyPass skyPass;
 
 	private Canvas canvas;
 	private AWTContext awtContext;
@@ -389,7 +368,7 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 				initVao();
 				initProgram();
 				initInterfaceTexture();
-				initSkybox();
+				skyPass.init(createTemplate());
 				if (glCapabilities.OpenGL45)
 				{
 					glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE); // 1 near 0 far
@@ -436,29 +415,6 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 			}
 			return true;
 		});
-	}
-
-	private void initSkybox()
-	{
-		// a sky shader that fails on this driver must not take the whole renderer down
-		Template template = createTemplate();
-		try
-		{
-			skyboxRenderer.initProgram(template);
-			skyAreas.load(gson);
-		}
-		catch (ShaderException ex)
-		{
-			log.error("Cubemap sky shader failed to compile, cubemap sky disabled", ex);
-		}
-		try
-		{
-			proceduralSky.initProgram(template, gson);
-		}
-		catch (ShaderException ex)
-		{
-			log.error("Procedural sky shader failed to compile, procedural sky disabled", ex);
-		}
 	}
 
 	private void setupGpuFlags()
@@ -510,9 +466,7 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 				root.free();
 
 				shutdownInterfaceTexture();
-				skyboxRenderer.freeTextures();
-				skyboxRenderer.shutdownProgram();
-				proceduralSky.shutdownProgram();
+				skyPass.shutdown();
 				shutdownProgram();
 				shutdownVao();
 				shutdownBuffers();
@@ -549,6 +503,7 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 	{
 		if (configChanged.getGroup().equals(BetterSkyboxConfig.GROUP))
 		{
+			skyPass.onConfigChanged(configChanged);
 			if (configChanged.getKey().equals("unlockFps")
 				|| configChanged.getKey().equals("vsyncMode")
 				|| configChanged.getKey().equals("fpsTarget"))
@@ -580,11 +535,6 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 					shutdownProgram();
 					initProgram();
 				});
-			}
-			else if (configChanged.getKey().equals("skyboxCubemap") || configChanged.getKey().equals("skyboxCustomName"))
-			{
-				// the cubemap itself is selected per frame in shouldDrawCubemap; just allow a fixed folder another try
-				skyboxRenderer.retryFailed();
 			}
 			else if (configChanged.getKey().equals("numThreads"))
 			{
@@ -1038,8 +988,8 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 		// Setup uniforms
 		final int drawDistance = getDrawDistance();
 		final int fogDepth = config.fogDepth();
-		final boolean cubemap = shouldDrawCubemap(scene);
-		final int sky = fogColor(cubemap);
+		final boolean drawSky = skyPass.beginFrame(scene);
+		final int sky = skyPass.fogColor(client.getSkyboxColor());
 		glUniform1i(uniUseFog, fogDepth > 0 ? 1 : 0);
 		glUniform4f(uniFogColor, (sky >> 16 & 0xFF) / 255f, (sky >> 8 & 0xFF) / 255f, (sky & 0xFF) / 255f, 1f);
 		glUniform1i(uniFogDepth, fogDepth);
@@ -1085,185 +1035,20 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 		glDepthFunc(GL_GREATER);
 		glEnable(GL_DEPTH_TEST);
 
-		drawSkybox(scene, sky, cubemap, cameraX, cameraY, cameraZ, cameraPitch, cameraYaw, viewportWidth, viewportHeight);
+		if (drawSky)
+		{
+			skyPass.draw(sky, cameraPitch, cameraYaw, viewportWidth, viewportHeight, vaoUiHandle, glProgram);
+		}
+		else
+		{
+			drawSkybox(scene, sky, cameraX, cameraY, cameraZ);
+		}
 
 		checkGLErrors();
 	}
 
-	private boolean procedural()
+	private void drawSkybox(Scene scene, int sky, float cameraX, float cameraY, float cameraZ)
 	{
-		return config.skyMode() == BetterSkyboxConfig.SkyMode.PROCEDURAL;
-	}
-
-	private void updateArea()
-	{
-		WorldPoint world = config.skyboxByArea() ? playerWorldPoint() : null;
-		SkyAreas.Area area = world == null ? null : skyAreas.find(world);
-		if (area != currentArea)
-		{
-			boolean jumped = lastWorld == null || world == null
-				|| lastWorld.getPlane() != world.getPlane()
-				|| lastWorld.distanceTo2D(world) > TELEPORT_TILES;
-			if (jumped)
-			{
-				borderBlend.release();
-			}
-			else if (area == previousArea && borderBlend.active())
-			{
-				borderBlend.bounce(world.getX(), world.getY());
-			}
-			else
-			{
-				borderBlend.cross(world.getX(), world.getY());
-			}
-			previousArea = currentArea;
-			currentArea = area;
-			log.info("Sky area: {}", area == null ? "unmapped" : area.name + " sky=" + area.sky + " fog=" + area.fog);
-		}
-		lastWorld = world;
-	}
-
-	/**
-	 * Cubemap for this frame: the area's sky for the current phase, else the global phase default, else the
-	 * manual Cubemap. A failed load falls through to the next candidate.
-	 */
-	private void selectCubemap(SkyClock.Phase phase)
-	{
-		float fade = config.skyboxFadeSeconds();
-		if (currentArea != null)
-		{
-			String areaSky = currentArea.skyFor(phase);
-			if (areaSky != null && skyboxRenderer.select(areaSky, fade))
-			{
-				return;
-			}
-		}
-		BetterSkyboxConfig.SkyboxTexture texture;
-		switch (phase)
-		{
-			case DAWN:
-				texture = config.skyboxDawn();
-				break;
-			case DUSK:
-				texture = config.skyboxDusk();
-				break;
-			case NIGHT:
-				texture = config.skyboxNight();
-				break;
-			default:
-				texture = config.skyboxTexture();
-		}
-		if (!skyboxRenderer.select(textureName(texture), fade) && texture != config.skyboxTexture())
-		{
-			skyboxRenderer.select(textureName(config.skyboxTexture()), fade);
-		}
-	}
-
-	private String textureName(BetterSkyboxConfig.SkyboxTexture texture)
-	{
-		return texture == BetterSkyboxConfig.SkyboxTexture.CUSTOM ? config.skyboxCustomName().trim() : texture.dir;
-	}
-
-	private boolean shouldDrawCubemap(Scene scene)
-	{
-		if (config.skyboxEnabled())
-		{
-			updateArea();
-			if (procedural())
-			{
-				borderBlend.release();
-			}
-			else
-			{
-				SkyClock.Phase phase = config.skyboxByTime() ? SkyClock.phase(skyClock.hour(config)) : SkyClock.Phase.DAY;
-				if (phase != lastPhase)
-				{
-					// the seconds fade owns time-of-day switches, even mid-way through a border blend
-					borderBlend.release();
-					lastPhase = phase;
-				}
-				selectCubemap(phase);
-				if (borderBlend.active() && lastWorld != null)
-				{
-					skyboxRenderer.overrideBlend(borderBlend.advance(lastWorld.getX(), lastWorld.getY(), config.skyboxFadeTiles()));
-				}
-			}
-		}
-		boolean ready = procedural() ? proceduralSky.isReady() : skyboxRenderer.isReady();
-		boolean draw = config.skyboxEnabled()
-			&& ready
-			&& (scene.getSkybox() == null || !config.preferGameSkybox())
-			&& (!config.skyboxOverworldOnly() || isOverworld());
-		boolean stormy = draw && config.lightningEnabled() && currentArea != null && currentArea.lightning;
-		flash = lightning.intensity(skyClock.elapsedSeconds(), stormy);
-		if (draw && procedural())
-		{
-			BetterSkyboxConfig.SkyPreset mood = config.areaMoods() && currentArea != null ? currentArea.presetValue : null;
-			proceduralSky.update(config, skyClock, mood);
-		}
-		return draw;
-	}
-
-	private int skyHorizonColor()
-	{
-		return procedural() ? proceduralSky.getHorizonColor() : skyboxRenderer.getHorizonColor();
-	}
-
-	private int baseFogColor(boolean cubemap)
-	{
-		int sky = client.getSkyboxColor();
-		if (!cubemap)
-		{
-			return sky;
-		}
-		switch (config.skyboxFogColorMode())
-		{
-			case SKYBOX:
-				return skyHorizonColor();
-			case GAME:
-				return sky;
-			case CUSTOM:
-				return config.skyboxFogCustomColor().getRGB() & 0xFFFFFF;
-			default:
-				if (currentArea != null && currentArea.fogColor >= 0)
-				{
-					return currentArea.fogColor;
-				}
-				return sky == 0 ? skyHorizonColor() : sky;
-		}
-	}
-
-	private int fogColor(boolean cubemap)
-	{
-		return SkyboxRenderer.mixColor(baseFogColor(cubemap), 0xFFFFFF, flash * 0.6f);
-	}
-
-	private void drawSkybox(Scene scene, int sky, boolean cubemap, float cameraX, float cameraY, float cameraZ,
-		float cameraPitch, float cameraYaw, int viewportWidth, int viewportHeight)
-	{
-		if (cubemap)
-		{
-			glClearColor((sky >> 16 & 0xFF) / 255f, (sky >> 8 & 0xFF) / 255f, (sky & 0xFF) / 255f, 1f);
-			glClearDepth(0d);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-			float[] skyProj = Mat4.scale(client.getScale(), client.getScale(), 1);
-			Mat4.mul(skyProj, Mat4.projection(viewportWidth, viewportHeight, 50));
-			Mat4.mul(skyProj, Mat4.rotateX(cameraPitch));
-			Mat4.mul(skyProj, Mat4.rotateY(cameraYaw));
-			if (procedural())
-			{
-				proceduralSky.draw(skyProj, sky, vaoUiHandle, config, skyClock, flash);
-			}
-			else
-			{
-				skyboxRenderer.draw(skyProj, sky, vaoUiHandle, config, flash);
-			}
-
-			glUseProgram(glProgram);
-			return;
-		}
-
 		Model skybox = scene.getSkybox();
 		if (skybox == null)
 		{
@@ -1288,25 +1073,6 @@ public class BetterSkyboxPlugin extends Plugin implements DrawCallbacks
 		rt.vaoO.draw();
 
 		glUniformMatrix4fv(uniEntityProj, false, IDENTITY);
-	}
-
-	private WorldPoint playerWorldPoint()
-	{
-		Player player = client.getLocalPlayer();
-		if (player == null)
-		{
-			return null;
-		}
-		LocalPoint local = player.getLocalLocation();
-		return client.getTopLevelWorldView().isInstance()
-			? WorldPoint.fromLocalInstance(client, local)
-			: player.getWorldLocation();
-	}
-
-	private boolean isOverworld()
-	{
-		WorldPoint world = playerWorldPoint();
-		return world != null && world.getY() < Constants.OVERWORLD_MAX_Y;
 	}
 
 	@Override

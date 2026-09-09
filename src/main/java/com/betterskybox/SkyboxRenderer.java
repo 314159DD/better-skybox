@@ -151,30 +151,33 @@ class SkyboxRenderer
 		return program != 0 && current != null;
 	}
 
-	/** 0 = still showing the previous cubemap, 1 = fade finished. */
+	/**
+	 * 0 = still showing the previous cubemap, 1 = fade finished. Pure: a value below 1 means {@link #previous}
+	 * is set. {@link #advanceFade()} owns retiring the fade, so this can be called any number of times a frame.
+	 */
 	private float blend()
 	{
 		if (blendOverride >= 0f && previous != null)
 		{
-			if (blendOverride >= 1f)
-			{
-				previous = null;
-				blendOverride = -1f;
-				return 1f;
-			}
-			return blendOverride;
+			return Math.min(blendOverride, 1f);
 		}
 		if (previous == null || fadeSeconds <= 0)
 		{
 			return 1f;
 		}
 		float t = (System.nanoTime() - fadeStartNanos) / (fadeSeconds * 1e9f);
-		if (t >= 1f)
+		return Math.min(t, 1f);
+	}
+
+	/** Retires a finished fade, freeing the previous cubemap and any blend override. Call once per frame. */
+	void advanceFade()
+	{
+		if (blend() < 1f)
 		{
-			previous = null;
-			return 1f;
+			return;
 		}
-		return t;
+		previous = null;
+		blendOverride = -1f;
 	}
 
 	/**
