@@ -87,12 +87,18 @@ class SkyClock
 	private static final double SYNODIC_MONTH_DAYS = 29.530588;
 	private static final LocalDateTime REFERENCE_NEW_MOON = LocalDateTime.of(2000, 1, 6, 18, 14);
 
+	/** Moon disk illumination fraction from days since new moon. */
+	private static float illumination(double daysSinceNewMoon)
+	{
+		return (float) ((1 - Math.cos(daysSinceNewMoon / SYNODIC_MONTH_DAYS * 2 * Math.PI)) / 2);
+	}
+
 	/** Fraction of the moon's disk that is lit, 0 = new, 1 = full. */
 	static float moonIllumination(LocalDateTime utc)
 	{
 		double days = ChronoUnit.SECONDS.between(REFERENCE_NEW_MOON, utc) / 86400.0;
 		double age = ((days % SYNODIC_MONTH_DAYS) + SYNODIC_MONTH_DAYS) % SYNODIC_MONTH_DAYS;
-		return (float) ((1 - Math.cos(age / SYNODIC_MONTH_DAYS * 2 * Math.PI)) / 2);
+		return illumination(age);
 	}
 
 	/**
@@ -108,7 +114,7 @@ class SkyClock
 			case CYCLE:
 			{
 				double cycles = elapsedSeconds() / (config.cycleMinutes() * 60.0);
-				return (float) ((1 - Math.cos(cycles / SYNODIC_MONTH_DAYS * 2 * Math.PI)) / 2);
+				return illumination(cycles);
 			}
 			default:
 				return -1;
