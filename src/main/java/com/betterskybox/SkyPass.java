@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.Random;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.Constants;
 import net.runelite.api.Player;
@@ -36,6 +37,8 @@ import net.runelite.api.Scene;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.events.ConfigChanged;
 import com.betterskybox.template.Template;
 import static org.lwjgl.opengl.GL33C.*;
@@ -52,6 +55,8 @@ class SkyPass
 {
 	/** A larger step between two frames than any walk or run is a teleport. */
 	private static final int TELEPORT_TILES = 8;
+	/** Drawn when a CUSTOM folder cannot be loaded and the Cubemap setting is CUSTOM too. */
+	static final BetterSkyboxConfig.SkyboxTexture DEFAULT_SKY = BetterSkyboxConfig.SkyboxTexture.PARTLY_CLOUDY;
 
 	@Inject
 	private Client client;
@@ -64,6 +69,9 @@ class SkyPass
 
 	@Inject
 	private Gson gson;
+
+	@Inject
+	private ChatMessageManager chatMessageManager;
 
 	@Inject
 	private SkyboxRenderer skyboxRenderer;
@@ -83,6 +91,8 @@ class SkyPass
 	private SkyAreas.Area previousArea;
 	private WorldPoint lastWorld;
 	private SkyClock.Phase lastPhase;
+	/** The custom folder name last reported in chat as unloadable, so the report goes out once per name. */
+	private String reportedCustomName;
 
 	void init(Template template)
 	{
@@ -245,8 +255,8 @@ class SkyPass
 	}
 
 	/**
-	 * Cubemap for this frame: the area's sky for the current phase, else the global phase default, else the
-	 * manual Cubemap. A failed load falls through to the next candidate.
+	 * Cubemap for this frame: the area's sky for the current phase, else the phase's configured sky. A CUSTOM
+	 * folder that cannot be loaded gives way to {@link #customFallback} and is reported in chat once per name.
 	 */
 	private void selectCubemap(SkyClock.Phase phase)
 	{
@@ -274,15 +284,36 @@ class SkyPass
 			default:
 				texture = config.skyboxTexture();
 		}
-		if (!skyboxRenderer.select(textureName(texture), fade) && texture != config.skyboxTexture())
+		if (texture != BetterSkyboxConfig.SkyboxTexture.CUSTOM)
 		{
-			skyboxRenderer.select(textureName(config.skyboxTexture()), fade);
+			skyboxRenderer.select(texture.dir, fade);
+			return;
+		}
+		String name = config.skyboxCustomName().trim();
+		if (skyboxRenderer.select(name, fade))
+		{
+			return;
+		}
+		BetterSkyboxConfig.SkyboxTexture fallback = customFallback(config.skyboxTexture());
+		skyboxRenderer.select(fallback.dir, fade);
+		if (!name.equals(reportedCustomName))
+		{
+			reportedCustomName = name;
+			String reason = name.isEmpty() ? "no custom sky folder set" : "custom sky folder " + name + " not found";
+			chatMessageManager.queue(QueuedMessage.builder()
+				.type(ChatMessageType.CONSOLE)
+				.value("Better Skybox: " + reason + ", using " + fallback)
+				.build());
 		}
 	}
 
-	private String textureName(BetterSkyboxConfig.SkyboxTexture texture)
+	/**
+	 * Sky drawn in place of a CUSTOM folder that cannot be loaded: the Cubemap setting, unless that is CUSTOM
+	 * itself (the same folder), then {@link #DEFAULT_SKY}.
+	 */
+	static BetterSkyboxConfig.SkyboxTexture customFallback(BetterSkyboxConfig.SkyboxTexture configured)
 	{
-		return texture == BetterSkyboxConfig.SkyboxTexture.CUSTOM ? config.skyboxCustomName().trim() : texture.dir;
+		return configured == BetterSkyboxConfig.SkyboxTexture.CUSTOM ? DEFAULT_SKY : configured;
 	}
 
 	private int skyHorizonColor(int gameSkyColor)
