@@ -1,6 +1,6 @@
 # gpu-skybox HANDOFF
 
-Last wrap: 2026-09-09 afternoon
+Last wrap: 2026-09-09 late afternoon (crash recovery session)
 
 ## What this is
 RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, plus a sky pass
@@ -36,7 +36,10 @@ RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, pl
    cubemaps (dawn/day/dusk/night per area with global phase defaults), lightning flashes in 117 HD storm
    areas (sky and fog), area moods (areas force a procedural preset over Time of day), and border blending
    by distance (Area fade is now tiles walked past the border, not seconds; stepping back reverses instead
-   of restarting). Commit 29de069. Themed AI skies are still off the table (Blockade Labs
+   of restarting). Commit 29de069. Final whole-branch review (opus) + fix wave landed as bc259f6:
+   teleports/plane changes and time-of-day switches hand the transition back to the seconds fade, lightning
+   flash is gated on the frame's draw decision, manual Cubemap fallback is real, 21 unit tests green.
+   Branch sprint/sky-features-2 is review-clean and NOT yet merged to master (merge after the in-game checklist). Themed AI skies are still off the table (Blockade Labs
    declined); Spacescape (MIT), Kenney stylised sets and an ambientCG sweep remain open candidates for a
    later round.
 
