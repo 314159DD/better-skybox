@@ -96,6 +96,8 @@ class SkyPass
 
 	void init(Template template)
 	{
+		// context-wide, for every cubemap either sky samples
+		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		skyAreas.load(gson);
 		// a sky shader that fails on this driver must not take the whole renderer down, nor the other sky
 		try
@@ -250,7 +252,7 @@ class SkyPass
 			}
 			previousArea = currentArea;
 			currentArea = area;
-			log.info("Sky area: {}", area == null ? "unmapped" : area.name + " sky=" + area.sky + " fog=" + area.fog);
+			log.debug("Sky area: {}", area == null ? "unmapped" : area.name + " sky=" + area.sky + " fog=" + area.fog);
 		}
 		lastWorld = world;
 	}
