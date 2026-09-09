@@ -24,6 +24,8 @@
  */
 package com.betterskybox;
 
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -36,9 +38,10 @@ import com.betterskybox.CubemapLoader.Faces;
 
 /**
  * Runs cubemap decodes off the client thread, so crossing into an area with an unseen sky costs no frame time.
- * One decode is in flight at a time and a request for another name supersedes the pending one, whose pixels are
- * dropped when they land: a player crossing three borders in a second uploads only the sky still wanted at the
- * end. Every callback runs on the client thread, the only place a texture may be created.
+ * One decode per {@link Slot} is in flight at a time and a request for another name supersedes that slot's
+ * pending one, whose pixels are dropped when they land: a player crossing three borders in a second uploads only
+ * the sky still wanted at the end. Every callback runs on the client thread, the only place a texture may be
+ * created.
  * <p>
  * One instance for the whole plugin ({@code @Singleton}): {@link SkyPass} starts and stops it, both sky
  * renderers request through it. Its own fields are read and written on the client thread alone; the loader
@@ -47,13 +50,37 @@ import com.betterskybox.CubemapLoader.Faces;
 @Singleton
 class CubemapLoads
 {
+	/**
+	 * Who is asking. Each slot supersedes only its own request, so the sky and the star map can ask in the same
+	 * frame without either dropping the other's pixels; one loader thread serves both, in the order they asked.
+	 */
+	enum Slot
+	{
+		/** The cubemap sky, {@link SkyboxRenderer}. */
+		SKY,
+		/** The bundled star map, {@link StarMap}. */
+		STARS
+	}
+
+	/** The load in flight for one slot: its name and its job, written and dropped as one value. */
+	private static class Pending
+	{
+		private final String name;
+		private final Future<?> future;
+
+		private Pending(String name, Future<?> future)
+		{
+			this.name = name;
+			this.future = future;
+		}
+	}
+
 	@Inject
 	private ClientThread clientThread;
 
 	private ExecutorService executor;
 	private Consumer<Runnable> onClientThread;
-	private String pendingName;
-	private Future<?> pending;
+	private final Map<Slot, Pending> pending = new EnumMap<>(Slot.class);
 
 	/** Starts the loader thread. Call from {@link SkyPass#init}. */
 	void start()
@@ -69,13 +96,17 @@ class CubemapLoads
 	}
 
 	/**
-	 * Stops the loader thread and drops the pending decode. Call before the sky textures are freed, so nothing
+	 * Stops the loader thread and drops every pending decode. Call before the sky textures are freed, so nothing
 	 * can upload into a context that is going away. Safe when {@link #start()} never ran: the renderer can fail
 	 * to come up before the sky pass is initialised.
 	 */
 	void stop()
 	{
-		clear();
+		for (Pending load : pending.values())
+		{
+			load.future.cancel(false);
+		}
+		pending.clear();
 		if (executor != null)
 		{
 			executor.shutdownNow();
@@ -85,52 +116,48 @@ class CubemapLoads
 
 	/**
 	 * Decodes {@code name} on the loader thread and hands the pixels to {@code onDecoded} on the client thread,
-	 * null when the folder cannot be read. Does nothing when {@code name} is the decode already in flight, so a
-	 * caller that asks every frame submits one job.
+	 * null when the folder cannot be read. Does nothing when {@code name} is the decode already in flight for
+	 * {@code slot}, so a caller that asks every frame submits one job; any other name supersedes that slot's
+	 * decode and leaves the other slots alone.
 	 */
-	void request(String name, Supplier<Faces> decode, Consumer<Faces> onDecoded)
+	void request(Slot slot, String name, Supplier<Faces> decode, Consumer<Faces> onDecoded)
 	{
-		if (name.equals(pendingName))
+		Pending load = pending.get(slot);
+		if (load != null && load.name.equals(name))
 		{
 			return;
 		}
-		cancel();
-		pendingName = name;
-		// the client thread is inside this method, so the delivery below cannot run before pending is assigned
-		pending = executor.submit(() ->
+		clear(slot);
+		// the client thread is inside this method, so the delivery below cannot run before the slot is filled
+		Future<?> future = executor.submit(() ->
 		{
 			Faces faces = decode.get();
-			onClientThread.accept(() -> deliver(name, faces, onDecoded));
+			onClientThread.accept(() -> deliver(slot, name, faces, onDecoded));
 		});
+		pending.put(slot, new Pending(name, future));
 	}
 
-	/** Forgets the pending decode; its pixels are dropped when they land. */
-	void clear()
+	/** Forgets {@code slot}'s pending decode; its pixels are dropped when they land. */
+	void clear(Slot slot)
 	{
-		cancel();
-		pendingName = null;
+		Pending load = pending.remove(slot);
+		if (load != null)
+		{
+			// only a job still queued stops here; one already decoding runs on and is dropped by deliver
+			load.future.cancel(false);
+		}
 	}
 
 	/** Client thread: hands the pixels over unless the request was superseded or dropped while decoding. */
-	private void deliver(String name, Faces faces, Consumer<Faces> onDecoded)
+	private void deliver(Slot slot, String name, Faces faces, Consumer<Faces> onDecoded)
 	{
-		if (!name.equals(pendingName))
+		Pending load = pending.get(slot);
+		if (load == null || !load.name.equals(name))
 		{
 			return;
 		}
-		pendingName = null;
-		pending = null;
+		pending.remove(slot);
 		onDecoded.accept(faces);
-	}
-
-	private void cancel()
-	{
-		if (pending != null)
-		{
-			// only a job still queued stops here; one already decoding runs on and is dropped by deliver
-			pending.cancel(false);
-			pending = null;
-		}
 	}
 
 	private static Thread loaderThread(Runnable job)

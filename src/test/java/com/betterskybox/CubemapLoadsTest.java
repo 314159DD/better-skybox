@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
+import com.betterskybox.CubemapLoads.Slot;
 import com.betterskybox.CubemapLoader.Faces;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -52,7 +53,13 @@ public class CubemapLoadsTest
 
 	private void request(String name)
 	{
-		loads.request(name, () -> decode(name), faces -> delivered.add(faces == null ? name + " failed" : faces.name));
+		request(Slot.SKY, name);
+	}
+
+	private void request(Slot slot, String name)
+	{
+		loads.request(slot, name, () -> decode(name),
+			faces -> delivered.add(faces == null ? name + " failed" : faces.name));
 	}
 
 	private Faces decode(String name)
@@ -90,6 +97,31 @@ public class CubemapLoadsTest
 		runClientThread();
 		assertEquals(Arrays.asList("first", "second"), decoded);
 		assertEquals(Collections.singletonList("second"), delivered);
+	}
+
+	@Test
+	public void twoSlotsAskingForDifferentNamesBothLand()
+	{
+		// beginFrame asks for the area's sky and then for the star map: neither may supersede the other
+		request(Slot.SKY, "sky");
+		request(Slot.STARS, "stars");
+		loaderThread.runAll();
+		runClientThread();
+		assertEquals(Arrays.asList("sky", "stars"), decoded);
+		assertEquals(Arrays.asList("sky", "stars"), delivered);
+	}
+
+	@Test
+	public void aSupersededNameLeavesTheOtherSlotAlone()
+	{
+		// the star map is still decoding while the player crosses two borders
+		request(Slot.STARS, "stars");
+		request(Slot.SKY, "first");
+		request(Slot.SKY, "second");
+		loaderThread.runAll();
+		runClientThread();
+		assertEquals(Arrays.asList("stars", "first", "second"), decoded);
+		assertEquals(Arrays.asList("stars", "second"), delivered);
 	}
 
 	@Test

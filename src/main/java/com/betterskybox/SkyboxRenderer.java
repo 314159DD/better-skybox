@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
+import com.betterskybox.CubemapLoads.Slot;
 import com.betterskybox.CubemapLoader.Cubemap;
 import com.betterskybox.CubemapLoader.Faces;
 import com.betterskybox.template.Template;
@@ -168,7 +169,7 @@ class SkyboxRenderer
 		Cubemap next = loaded.get(name);
 		if (next == null)
 		{
-			loads.request(name, () -> loader.decode(name), faces -> finish(name, faces, fadeSeconds, night));
+			loads.request(Slot.SKY, name, () -> loader.decode(name), faces -> finish(name, faces, fadeSeconds, night));
 			return true;
 		}
 		show(next, fadeSeconds, night);

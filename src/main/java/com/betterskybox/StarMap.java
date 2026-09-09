@@ -25,6 +25,7 @@
 package com.betterskybox;
 
 import javax.inject.Inject;
+import com.betterskybox.CubemapLoads.Slot;
 import com.betterskybox.CubemapLoader.Cubemap;
 import com.betterskybox.CubemapLoader.Faces;
 import static org.lwjgl.opengl.GL33C.*;
@@ -61,7 +62,7 @@ class StarMap
 		{
 			if (stars == null)
 			{
-				loads.request(STARS, () -> CubemapLoader.decode(STARS), this::upload);
+				loads.request(Slot.STARS, STARS, () -> CubemapLoader.decode(STARS), this::upload);
 			}
 			return;
 		}
