@@ -39,7 +39,7 @@ RuneLite external plugin: the stock GPU renderer copied into `com.gpuskybox`, pl
    of restarting). Commit 29de069. Final whole-branch review (opus) + fix wave landed as bc259f6:
    teleports/plane changes and time-of-day switches hand the transition back to the seconds fade, lightning
    flash is gated on the frame's draw decision, manual Cubemap fallback is real, 21 unit tests green.
-   Branch sprint/sky-features-2 is review-clean and NOT yet merged to master (merge after the in-game checklist). Themed AI skies are still off the table (Blockade Labs
+   In-game checklist passed, branch merged into master (ff, a8108b5). Distribution decision: RuneLite Plugin Hub as "Better Skybox" (name "Skybox" is taken by a flat-colour plugin); next sprint = hub-ready. Themed AI skies are still off the table (Blockade Labs
    declined); Spacescape (MIT), Kenney stylised sets and an ambientCG sweep remain open candidates for a
    later round.
 
