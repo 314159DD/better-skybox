@@ -1,6 +1,6 @@
 # Better Skybox HANDOFF
 
-Last wrap: 2026-09-09 late afternoon (crash recovery session)
+Last wrap: 2026-09-10 00:20 (hub submission)
 
 ## What this is
 RuneLite external plugin: the stock GPU renderer copied into `com.betterskybox`, plus a sky pass
@@ -48,19 +48,14 @@ until Steven flips it). Loaded into the official launcher via `build/libs/better
    11 correctness fixes, async cubemap decode, GPU settings import (16 keys, once), 62 tests, README/CONTRIBUTING,
    icon + banner. GitHub: 314159DD/better-skybox (PRIVATE, no AI attribution anywhere, keep it that way; old repo
    better-skybox-old to delete).
-8. NEXT: Steven's E2E acceptance on the sprint jar (settings import once, no stall at borders, custom-folder chat
-   message, sun 5 degrees higher after M1). Then final review + fix wave, rename the on-disk folder to better-skybox
-   (launcher settings.json follows), merge to master, flip public, Discord size question, hub PR
-   (.superpowers/sdd/hub-ready/submission-drafts.md).
-   Earlier plan note: Plugin Hub road. Plan: plan/2026-09-09-hub-ready.md (4 sprints hub-1..hub-4 + the page). Review with all
-   findings: .superpowers/sdd/hub-ready-review.md. Start with hub-1 (packaging). RS3 rips already dropped (5d35239).
-
-## Gotchas
-- Compile with `./gradlew agentJar --offline -q` (7 s). Restart the client to pick up the jar.
-- `ref/` is gitignored: sparse RuneLite checkout + 117 HD PR 558/655 files, needed for diffs only.
-- `run.bat` dev client = legacy login only on this machine.
-- Config panel: five sections (Renderer 10, Sky 20, Cubemap 30, Procedural 40, Fog 50), positions restart at 1 inside each. Keys unchanged.
-- Poly Haven and ambientCG APIs need a User-Agent header (403 otherwise); the scripts set one.
-- 117 HD regionBoxes are two CORNER region ids of a box, not an id range. Cost one wrong lookup pass.
-- EXR reading: cv2 with OPENCV_IO_ENABLE_OPENEXR=1 (set in starmap_to_cubemap.py); no OpenEXR package needed.
-- The Bash tool chokes on inline python heredocs containing triple quotes or escaped apostrophes; write scripts to the scratchpad and run them.
+8. DONE 2026-09-10: Task 7 (NASA star map over night cubemaps), final review + fix wave (12 findings), Task 8
+   (jar 262 KB: no cubemaps and no star map in the jar; ONE optional sky pack, PNG originals, 36.3 MB, via the
+   "Download sky pack" setting into ~/.runelite/better-skybox/pack; PROCEDURAL is the default sky). 92 tests.
+   Repo PUBLIC, release sky-pack-v1 live, plugin-hub PR #16334 open (fork 314159DD/plugin-hub, branch
+   better-skybox, file plugins/better-skybox = commit 09ecfa8). Hub packager facts: jar limit 10 MiB hard
+   (warning at 8), standard build compiles src/main only, client 1.12.38.
+9. NEXT: (a) Steven tests the pack download in the client (toggle Download sky pack, wait for the "installed"
+   chat line, check NIGHT cubemap + star map). (b) Watch PR #16334 CI; on a failure fix, push, and update the
+   commit= hash in plugins/better-skybox on the fork branch (same PR). (c) Rename the on-disk folder to
+   better-skybox when the client is closed (launcher settings.json path follows). (d) Later packs: new tag,
+   new PACK_URL in SkyPack.java.
