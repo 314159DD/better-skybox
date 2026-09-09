@@ -77,6 +77,7 @@ class SkyboxRenderer
 	};
 
 	private final Loader loader;
+	private final CubemapLoads loads;
 	private int program;
 	private final Map<String, Cubemap> loaded = new HashMap<>();
 	private final Set<String> failed = new HashSet<>();
@@ -101,14 +102,15 @@ class SkyboxRenderer
 	private final long startNanos = System.nanoTime();
 
 	@Inject
-	SkyboxRenderer()
+	SkyboxRenderer(CubemapLoads loads)
 	{
-		this(CUBEMAP_LOADER);
+		this(CUBEMAP_LOADER, loads);
 	}
 
-	SkyboxRenderer(Loader loader)
+	SkyboxRenderer(Loader loader, CubemapLoads loads)
 	{
 		this.loader = loader;
+		this.loads = loads;
 	}
 
 	void initProgram(Template template) throws ShaderException
@@ -134,8 +136,13 @@ class SkyboxRenderer
 	}
 
 	/**
-	 * Makes {@code name} the current cubemap, loading it on first use, and starts a crossfade from the one shown
-	 * before. Returns false when the cubemap cannot be loaded; that name is then skipped until {@link #retryFailed()}.
+	 * Makes {@code name} the sky to show. A cubemap that is already loaded is swapped in at once, crossfading
+	 * from the one before; any other is decoded off the client thread while the sky on screen keeps drawing, and
+	 * swapped in when its pixels land. So the frame never waits for a decode, and the caller must not read the
+	 * result as "showing now".
+	 * <p>
+	 * Returns false only for a name that will never show and wants replacing: an empty one, or one that failed
+	 * to load and is skipped until {@link #retryFailed()}.
 	 */
 	boolean select(String name, float fadeSeconds)
 	{
@@ -146,17 +153,24 @@ class SkyboxRenderer
 		Cubemap next = loaded.get(name);
 		if (next == null)
 		{
-			Faces faces = loader.decode(name);
-			if (faces == null)
-			{
-				failed.add(name);
-				return false;
-			}
-			next = loader.upload(faces, TEXTURE_UNIT);
-			loaded.put(name, next);
+			loads.request(name, () -> loader.decode(name), faces -> finish(name, faces, fadeSeconds));
+			return true;
 		}
 		show(next, fadeSeconds);
 		return true;
+	}
+
+	/** Client thread: uploads what the loader thread decoded, or remembers a name that cannot be loaded. */
+	private void finish(String name, Faces faces, float fadeSeconds)
+	{
+		if (faces == null)
+		{
+			failed.add(name);
+			return;
+		}
+		Cubemap next = loader.upload(faces, TEXTURE_UNIT);
+		loaded.put(name, next);
+		show(next, fadeSeconds);
 	}
 
 	/** Puts {@code next} on screen, crossfading from whatever was showing. */

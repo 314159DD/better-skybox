@@ -26,6 +26,7 @@ package com.betterskybox;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
 import com.betterskybox.CubemapLoader.Cubemap;
@@ -36,13 +37,20 @@ import static org.junit.Assert.assertTrue;
 
 public class SkyboxRendererTest
 {
-	private static SkyboxRenderer renderer(List<String> attempts)
+	private final QueuedExecutor loaderThread = new QueuedExecutor();
+	private final List<String> decoded = new ArrayList<>();
+	private final List<String> uploaded = new ArrayList<>();
+
+	/** A renderer whose decodes sit in {@link #loaderThread} until the test runs them; deliveries are inline. */
+	private SkyboxRenderer renderer()
 	{
-		return new SkyboxRenderer(loader(attempts));
+		CubemapLoads loads = new CubemapLoads();
+		loads.start(loaderThread, Runnable::run);
+		return new SkyboxRenderer(loader(decoded), loads);
 	}
 
-	/** A loader that records every decode, fails for names starting with "bad" and touches no GL. */
-	static SkyboxRenderer.Loader loader(List<String> decoded)
+	/** A loader that records what it decodes and uploads, fails for names starting with "bad", has no GL. */
+	private SkyboxRenderer.Loader loader(List<String> decoded)
 	{
 		return new SkyboxRenderer.Loader()
 		{
@@ -56,6 +64,7 @@ public class SkyboxRendererTest
 			@Override
 			public Cubemap upload(Faces faces, int textureUnit)
 			{
+				uploaded.add(faces.name);
 				Cubemap cubemap = new Cubemap();
 				cubemap.horizonColor = faces.horizonColor;
 				return cubemap;
@@ -66,45 +75,65 @@ public class SkyboxRendererTest
 	@Test
 	public void failedNamesAreAllRememberedUntilRetry()
 	{
-		List<String> attempts = new ArrayList<>();
-		SkyboxRenderer renderer = renderer(attempts);
-		assertFalse(renderer.select("bad-area", 1f));
-		assertFalse(renderer.select("bad-default", 1f));
+		SkyboxRenderer renderer = renderer();
+		// nothing is known to be bad on the frame that asks: the failure is only known once the decode lands
+		assertTrue(renderer.select("bad-area", 1f));
+		loaderThread.runAll();
+		assertTrue(renderer.select("bad-default", 1f));
+		loaderThread.runAll();
 		// an area sky and its fallback both missing must not thrash between the two every frame
 		assertFalse(renderer.select("bad-area", 1f));
 		assertFalse(renderer.select("bad-default", 1f));
-		assertEquals(Arrays.asList("bad-area", "bad-default"), attempts);
+		assertEquals(Arrays.asList("bad-area", "bad-default"), decoded);
 
 		renderer.retryFailed();
+		assertTrue(renderer.select("bad-area", 1f));
+		loaderThread.runAll();
+		assertEquals(3, decoded.size());
 		assertFalse(renderer.select("bad-area", 1f));
-		assertEquals(3, attempts.size());
 	}
 
 	@Test
 	public void emptyNameIsNeverLoaded()
 	{
-		List<String> attempts = new ArrayList<>();
-		assertFalse(renderer(attempts).select("", 1f));
-		assertTrue(attempts.isEmpty());
+		assertFalse(renderer().select("", 1f));
+		loaderThread.runAll();
+		assertTrue(decoded.isEmpty());
 	}
 
 	@Test
 	public void loadedCubemapsStayResident()
 	{
-		List<String> attempts = new ArrayList<>();
-		SkyboxRenderer renderer = renderer(attempts);
+		SkyboxRenderer renderer = renderer();
 		assertTrue(renderer.select("sky", 1f));
+		loaderThread.runAll();
 		assertTrue(renderer.select("other", 1f));
+		loaderThread.runAll();
 		assertTrue(renderer.select("sky", 1f));
-		assertEquals(Arrays.asList("sky", "other"), attempts);
+		loaderThread.runAll();
+		assertEquals(Arrays.asList("sky", "other"), decoded);
 	}
 
 	@Test
-	public void horizonColorIsTheFallbackBeforeTheFirstCubemap()
+	public void onlyTheSkyStillWantedIsUploaded()
 	{
-		SkyboxRenderer renderer = renderer(new ArrayList<>());
+		// two borders crossed before the first decode lands; the sky left behind is never uploaded
+		SkyboxRenderer renderer = renderer();
+		renderer.select("first", 1f);
+		renderer.select("second", 1f);
+		loaderThread.runAll();
+		assertEquals(Collections.singletonList("second"), uploaded);
+	}
+
+	@Test
+	public void horizonColorIsTheFallbackUntilTheDecodeLands()
+	{
+		SkyboxRenderer renderer = renderer();
 		assertEquals(0xABCDEF, renderer.getHorizonColor(0xABCDEF));
 		renderer.select("sky", 1f);
+		// the frame does not wait for the decode: it draws on with the game colour
+		assertEquals(0xABCDEF, renderer.getHorizonColor(0xABCDEF));
+		loaderThread.runAll();
 		assertEquals(0x112233, renderer.getHorizonColor(0xABCDEF));
 	}
 

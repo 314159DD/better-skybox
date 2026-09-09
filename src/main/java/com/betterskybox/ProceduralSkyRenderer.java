@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import com.betterskybox.CubemapLoader.Cubemap;
 import com.betterskybox.CubemapLoader.Faces;
@@ -49,6 +50,8 @@ class ProceduralSkyRenderer
 		.add(GL_FRAGMENT_SHADER, "proc_sky_frag.glsl");
 
 	static final int STAR_TEXTURE_UNIT = 4;
+	/** Folder of the bundled star map cubemap. */
+	private static final String STARS = "stars";
 	/** Tilt of the celestial pole towards the horizon; puts the Milky Way in an arc instead of a ring. */
 	private static final double POLE_TILT = Math.toRadians(40);
 
@@ -67,6 +70,9 @@ class ProceduralSkyRenderer
 		Keyframe[] horizon;
 		Keyframe[] sunGlow;
 	}
+
+	@Inject
+	private CubemapLoads loads;
 
 	private Gradient gradient;
 	private int program;
@@ -142,25 +148,33 @@ class ProceduralSkyRenderer
 	}
 
 	/**
-	 * Loads the 9.6 MB star map on the first frame it is wanted and frees it on the first frame it is not, so a
-	 * cubemap-only session never decodes it. Call every frame, on the client thread.
+	 * Asks for the 9.6 MB star map on the first frame it is wanted and frees it on the first frame it is not, so
+	 * a cubemap-only session never decodes it and no frame waits for the decode. Call every frame, on the client
+	 * thread.
 	 */
 	void starMap(boolean wanted)
 	{
-		boolean load = wanted && program != 0;
-		if (load == (stars != null))
+		if (wanted && program != 0)
 		{
+			if (stars == null)
+			{
+				loads.request(STARS, () -> CubemapLoader.decode(STARS), this::uploadStarMap);
+			}
 			return;
 		}
-		if (load)
-		{
-			Faces faces = CubemapLoader.decode("stars");
-			stars = faces == null ? null : CubemapLoader.upload(faces, STAR_TEXTURE_UNIT);
-		}
-		else
+		if (stars != null)
 		{
 			glDeleteTextures(stars.texture);
 			stars = null;
+		}
+	}
+
+	/** Client thread: null pixels mean the folder could not be read, which asks again on the next frame. */
+	private void uploadStarMap(Faces faces)
+	{
+		if (faces != null)
+		{
+			stars = CubemapLoader.upload(faces, STAR_TEXTURE_UNIT);
 		}
 	}
 

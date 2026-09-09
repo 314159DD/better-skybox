@@ -74,6 +74,9 @@ class SkyPass
 	private ChatMessageManager chatMessageManager;
 
 	@Inject
+	private CubemapLoads loads;
+
+	@Inject
 	private SkyboxRenderer skyboxRenderer;
 
 	@Inject
@@ -96,6 +99,7 @@ class SkyPass
 
 	void init(Template template)
 	{
+		loads.start();
 		// context-wide, for every cubemap either sky samples
 		glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		skyAreas.load(gson);
@@ -124,6 +128,8 @@ class SkyPass
 
 	void shutdown()
 	{
+		// first: a decode landing after this would upload into a context that is being torn down
+		loads.stop();
 		skyboxRenderer.freeTextures();
 		skyboxRenderer.shutdownProgram();
 		proceduralSky.shutdownProgram();
