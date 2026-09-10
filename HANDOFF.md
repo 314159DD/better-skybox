@@ -58,8 +58,9 @@ until Steven flips it). Loaded into the official launcher via `build/libs/better
    an extension API (Adam on plugin-hub #14764). The WIP is Adam-/runelite branch gpu-api: GpuApi.registerExtension,
    GpuExtension.onContextCreate/onContextDestroy/drawSkybox/onPostDrawToplevel/getShaderExtension, UBO with
    worldProj + cameraPos. Mapping + feedback drafts: .superpowers/sdd/hub-ready/gpu-api-notes.md.
-10. NEXT: (a) Steven joins the RuneLite Discord "gpu api" thread and posts the feedback (notes file, 5 points).
-    (b) Comment on PR #16334 (draft in the notes file). (c) Port: branch gpu-api of this repo, SkyPass becomes a
-    GpuExtension, renderer copy + patches + sync script + settings import + conflicts removed; build the client
-    from Adam's branch into mavenLocal to compile against it. (d) Resubmit when the API is in a released client.
-    Sideload (javaagent) stays the way to run it meanwhile. Pack download and everything else stays as shipped.
+10. PAUSED 2026-09-10 (Steven): wait for the GPU extension API. PR #16334 stays open untouched, no Discord post.
+    Wake-up trigger for /orient: check whether Adam-/runelite branch gpu-api has become a PR or landed in
+    runelite/runelite (`gh pr list --repo runelite/runelite --search "gpu api"` and
+    `gh api repos/runelite/runelite/compare/master...Adam-:gpu-api`). When it ships in a released client:
+    port SkyPass to a GpuExtension on a gpu-api branch (mapping + gaps in .superpowers/sdd/hub-ready/gpu-api-notes.md),
+    drop the renderer copy, resubmit. Until then the plugin runs via the javaagent sideload and the sky pack.
