@@ -54,8 +54,12 @@ until Steven flips it). Loaded into the official launcher via `build/libs/better
    Repo PUBLIC, release sky-pack-v1 live, plugin-hub PR #16334 open (fork 314159DD/plugin-hub, branch
    better-skybox, file plugins/better-skybox = commit 09ecfa8). Hub packager facts: jar limit 10 MiB hard
    (warning at 8), standard build compiles src/main only, client 1.12.38.
-9. NEXT: (a) Steven tests the pack download in the client (toggle Download sky pack, wait for the "installed"
-   chat line, check NIGHT cubemap + star map). (b) Watch PR #16334 CI; on a failure fix, push, and update the
-   commit= hash in plugins/better-skybox on the fork branch (same PR). (c) Rename the on-disk folder to
-   better-skybox when the client is closed (launcher settings.json path follows). (d) Later packs: new tag,
-   new PACK_URL in SkyPack.java.
+9. BLOCKED 2026-09-10 (hub policy): maintainers accept no new GPU-renderer plugins until the core GPU plugin exposes
+   an extension API (Adam on plugin-hub #14764). The WIP is Adam-/runelite branch gpu-api: GpuApi.registerExtension,
+   GpuExtension.onContextCreate/onContextDestroy/drawSkybox/onPostDrawToplevel/getShaderExtension, UBO with
+   worldProj + cameraPos. Mapping + feedback drafts: .superpowers/sdd/hub-ready/gpu-api-notes.md.
+10. NEXT: (a) Steven joins the RuneLite Discord "gpu api" thread and posts the feedback (notes file, 5 points).
+    (b) Comment on PR #16334 (draft in the notes file). (c) Port: branch gpu-api of this repo, SkyPass becomes a
+    GpuExtension, renderer copy + patches + sync script + settings import + conflicts removed; build the client
+    from Adam's branch into mavenLocal to compile against it. (d) Resubmit when the API is in a released client.
+    Sideload (javaagent) stays the way to run it meanwhile. Pack download and everything else stays as shipped.
